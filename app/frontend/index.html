@@ -3,155 +3,206 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NobiDownloader</title>
-<link rel="stylesheet" href="/static/style.css?v=playlist2">
+<meta name="theme-color" content="#eef4ed">
+<title>NobiDownloader — V1.1 Prototype</title>
+<link rel="icon" type="image/png" href="/static/assets/nobi-logo.png">
+<link rel="stylesheet" href="/static/style.css?v=v11-logo1">
 </head>
-<body>
-<div class="app">
-  <header class="topbar">
+<body class="theme-forest">
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
     <div class="brand">
-      <div class="brand-mark"><span></span></div>
-      <div><b>NobiDownloader</b><small>Download Freedom</small></div>
+      <div class="brand-mark"><img src="/static/assets/nobi-logo.png" alt="NobiDownloader logo"></div>
+      <div><strong>NobiDownloader</strong><span>Download Media Your Way</span></div>
     </div>
+    <nav class="nav" aria-label="Primary">
+      <button class="nav-item active" data-view="home"><span>⌂</span><div><b>Home</b><small>Download anything</small></div></button>
+      <button class="nav-item" data-view="downloads"><span>↓</span><div><b>Downloads</b><small>View progress</small></div></button>
+      <button class="nav-item" data-view="playlists"><span>☷</span><div><b>Playlists</b><small>Manage playlists</small></div></button>
+      <button class="nav-item" data-view="settings"><span>⚙</span><div><b>Settings</b><small>Preferences</small></div></button>
+    </nav>
+    <div class="privacy-card">
+      <div class="privacy-icon">✓</div>
+      <div><b>100% Local &amp; Private</b><span>Your files stay on your computer.</span></div>
+    </div>
+    <div class="sidebar-art" aria-hidden="true">
+      <div class="hill hill-a"></div><div class="hill hill-b"></div><div class="sun"></div>
+      <div class="tree tree-a"></div><div class="tree tree-b"></div>
+      <p>Good Content<br><em>Goes Further</em></p>
+    </div>
+    <div class="sidebar-foot"><span>V1.1 Prototype</span><span>Made for calmer sessions ♡</span></div>
+  </aside>
 
-    <div class="top-actions">
-      <div class="theme-picker-wrap">
-        <button class="theme-toggle" id="themeToggle" type="button" title="Eye-comfort themes" aria-label="Eye-comfort themes">◈</button>
-        <div id="themeMenu" class="theme-menu hidden">
-          <div class="theme-menu-title">Eye-comfort themes</div>
-          <button type="button" data-theme="midnight"><span class="theme-dot midnight"></span><div><b>Midnight</b><small>Deep blue • default</small></div></button>
-          <button type="button" data-theme="slate"><span class="theme-dot slate"></span><div><b>Slate</b><small>Soft graphite</small></div></button>
-          <button type="button" data-theme="forest"><span class="theme-dot forest"></span><div><b>Forest</b><small>Calm green</small></div></button>
-          <button type="button" data-theme="lavender"><span class="theme-dot lavender"></span><div><b>Lavender</b><small>Muted violet</small></div></button>
-          <button type="button" data-theme="warm"><span class="theme-dot warm"></span><div><b>Warm</b><small>Low-blue amber</small></div></button>
+  <main class="content">
+    <header class="topbar">
+      <button class="mobile-menu" id="mobileMenu" aria-label="Open menu">☰</button>
+      <div class="topline">Simple <i>•</i> Fast <i>•</i> Private <i>•</i> Yours</div>
+      <div class="top-actions">
+        <button class="icon-btn" id="themeButton" title="Theme">☼</button>
+        <a class="icon-btn github" href="https://github.com/NavajyotiBayan/NobiDownloader" target="_blank" rel="noopener" title="GitHub">◖</a>
+      </div>
+    </header>
+
+    <section class="view active" id="view-home">
+      <section class="dashboard-strip" aria-label="NobiDownloader status and support">
+        <div class="dashboard-card server-dashboard-card">
+          <div class="dashboard-card-icon server-live-icon">●</div>
+          <div class="dashboard-card-copy"><span class="eyebrow">LOCAL SERVER</span><b>Server Online</b><small>NobiDownloader is running safely on this computer.</small></div>
+          <button id="dashboardStopServer" class="danger-outline" type="button">Close Server</button>
         </div>
+        <a class="dashboard-card star-dashboard-card" href="https://github.com/NavajyotiBayan/NobiDownloader" target="_blank" rel="noopener" aria-label="Star NobiDownloader on GitHub">
+          <div class="dashboard-card-icon star-icon">★</div>
+          <div class="dashboard-card-copy"><span class="eyebrow">SUPPORT NOBI</span><b>If you like the tool, please star it</b><small>A GitHub star helps the project grow. Thank you! ♡</small></div>
+          <span class="dashboard-arrow">↗</span>
+        </a>
+      </section>
+
+      <div class="welcome">
+        <div>
+          <span class="eyebrow">WELCOME TO NOBIDOWNLOADER</span>
+          <h1>Ready to <em>download?</em></h1>
+          <p>Paste a video or playlist URL and choose exactly what you need.</p>
+        </div>
+        <div class="welcome-note">More videos.<br><em>More freedom.</em><span></span></div>
       </div>
 
-      <a class="github-profile" href="https://github.com/NavajyotiBayan" target="_blank" rel="noopener noreferrer" title="Open GitHub profile" aria-label="Open NavajyotiBayan GitHub profile" aria-label="Open NobiDownloader GitHub repository" title="GitHub repository">
-        <svg class="github-logo-large" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 .5A11.5 11.5 0 0 0 8.36 22.91c.58.1.79-.25.79-.56v-2.2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.34-1.3-1.7-1.3-1.7-1.06-.72.08-.7.08-.7 1.18.09 1.8 1.21 1.8 1.21 1.04 1.79 2.73 1.27 3.4.97.1-.76.41-1.27.74-1.56-2.55-.29-5.23-1.28-5.23-5.7 0-1.26.45-2.29 1.2-3.1.75.81 1.2 1.84 1.2 3.1 0 4.43-2.69 5.4-5.25 5.69.41.35.78 1.04.78 2.1v3.11c0 .31.21.67.8.55A11.5 11.5 0 0 0 12 .5Z"/>
-        </svg>
-      </a>
-    </div>
-  </header>
+      <form class="url-bar" id="analyzeForm">
+        <span class="url-icon">↗</span>
+        <input id="url" placeholder="Paste a video or playlist URL…" autocomplete="off" aria-label="Media URL">
+        <button type="button" class="clear-url" id="clearUrl" aria-label="Clear URL">×</button>
+        <button class="primary" id="analyze">Analyze <span>→</span></button>
+      </form>
+      <section class="sources" aria-label="Popular websites">
+        <div class="sources-heading"><div><span class="eyebrow">POPULAR SOURCES</span><h3>Copy a link from your favorite site</h3></div><span>Paste it above • NobiDownloader will handle the rest</span></div>
+        <div class="source-grid">
+          <button class="source-chip" data-site="YouTube" data-url="https://www.youtube.com/" type="button"><span class="site-logo youtube">▶</span><span><b>YouTube</b><small>Video • MP3 • Playlists</small></span><i>↗</i></button>
+          <button class="source-chip" data-site="TikTok" data-url="https://www.tiktok.com/" type="button"><span class="site-logo tiktok">♪</span><span><b>TikTok</b><small>Short videos • Audio</small></span><i>↗</i></button>
+          <button class="source-chip" data-site="Instagram" data-url="https://www.instagram.com/" type="button"><span class="site-logo instagram">◎</span><span><b>Instagram</b><small>Reels • Videos</small></span><i>↗</i></button>
+          <button class="source-chip" data-site="Facebook" data-url="https://www.facebook.com/" type="button"><span class="site-logo facebook">f</span><span><b>Facebook</b><small>Videos • Watch</small></span><i>↗</i></button>
+          <button class="source-chip" data-site="X" data-url="https://x.com/" type="button"><span class="site-logo xsite">𝕏</span><span><b>X</b><small>Video posts</small></span><i>↗</i></button>
+          <button class="source-chip" data-site="Reddit" data-url="https://www.reddit.com/" type="button"><span class="site-logo reddit">●</span><span><b>Reddit</b><small>Video posts</small></span><i>↗</i></button>
+          <button class="source-chip" data-site="Vimeo" data-url="https://vimeo.com/" type="button"><span class="site-logo vimeo">V</span><span><b>Vimeo</b><small>Video</small></span><i>↗</i></button>
+          <button class="source-chip" data-site="SoundCloud" data-url="https://soundcloud.com/" type="button"><span class="site-logo soundcloud">≋</span><span><b>SoundCloud</b><small>Audio • MP3</small></span><i>↗</i></button>
+        </div>
+        <p class="source-note">Website availability depends on what the installed yt-dlp version supports.</p>
+      </section>
+      <div id="message" class="message" aria-live="polite"></div>
 
-  <main>
-    <section class="hero">
-      <div class="hero-copy">
-        <small>LOCAL MEDIA WORKSTATION</small>
-        <h1>Download Anything,<br><strong>Your Way.</strong></h1>
-        <p>Videos <i>•</i> Audio <i>•</i> Playlists <i>•</i> Social Media <i>•</i> And More</p>
-      </div>
-      <div class="hero-art"><b></b><i></i><em></em></div>
-    </section>
-
-    <section class="analyzer">
-      <div class="url-box">
-        <span>↗</span>
-        <input id="url" placeholder="Paste URL here (YouTube, TikTok, Instagram, etc…)" autocomplete="off">
-        <button id="clearUrl">×</button>
-      </div>
-      <button id="analyze" class="analyze">⌕ <b>Analyze</b></button>
-    </section>
-    <div id="message" class="message"></div>
-
-    <div class="platforms">
-      <button>▶ YouTube</button><button>♪ TikTok</button><button>◎ Instagram</button>
-      <button>𝕏 X (Twitter)</button><button>f Facebook</button><button>● Reddit</button><button>••• More</button>
-    </div>
-
-    <section class="dashboard">
-      <div class="main-column">
-        <article id="mediaCard" class="card media hidden">
-          <div class="media-top">
-            <div class="preview">
-              <img id="thumb" alt="">
-              <div class="play">▶</div>
-            </div>
-            <div class="media-info">
-              <span id="source">MEDIA</span>
-              <h2 id="title">Media title</h2>
-              <p id="meta"></p>
-              <div class="media-tags"><span id="mediaTypeTag">Video</span><span id="qualityTag">Detected</span></div>
-            </div>
-            <div class="save-card">
-              <div class="save-head"><span>▣</span><b>Save to</b></div>
-              <div class="path-row"><input id="savePath" placeholder="Default: NobiDownloader\downloads"><button id="chooseFolder">Browse</button></div>
-              <div class="save-bottom"><small id="pathStatus">Default download folder</small><span>● Folder ready</span></div>
-            </div>
+      <section id="mediaCard" class="workspace-card hidden">
+        <div class="media-summary">
+          <div class="thumb-wrap">
+            <img id="thumb" alt="Media thumbnail">
+            <div class="thumb-play">▶</div>
+            <span id="duration" class="duration"></span>
           </div>
-
-          <div class="format-panel">
-            <div class="format-tabs">
-              <button class="active" data-kind="video">▣ &nbsp;Video</button>
-              <button data-kind="audio">♫ &nbsp;Audio / MP3</button>
-
-            </div>
-            <div id="playlistInfo" class="playlist-info hidden"></div>
-            <div id="formats" class="formats"></div>
-            <div class="advanced"><span>⚙ &nbsp; Advanced Options</span><span>⌄</span></div>
-            <button id="download" class="download-btn">⇩ &nbsp; Download Now</button>
+          <div class="media-copy">
+            <div class="source-line"><span id="source">MEDIA</span><span id="mediaTypeTag" class="soft-pill">Video</span><span id="qualityTag" class="soft-pill">Detected</span></div>
+            <h2 id="title">Media title</h2>
+            <p id="meta"></p>
+            <div id="playlistBadge" class="playlist-badge hidden"><span>☷</span><b id="playlistCount">Playlist</b><small id="playlistName"></small></div>
           </div>
-        </article>
-
-        <div class="section-head">
-          <div><small>DOWNLOADS</small><h2>Download Queue <span id="queueCount">(0)</span></h2></div>
-          <div><button id="pauseAll" class="small-btn">Ⅱ &nbsp; Pause All</button><button id="clearAll" class="small-btn red">× &nbsp; Clear All</button></div>
+          <button id="playlistToggle" class="outline hidden">View Playlist <span>⌄</span></button>
         </div>
-        <div id="queue" class="card queue">
-          <div class="empty"><div>⇩</div><b>Your download queue is empty</b><small>Analyze a media URL to start downloading.</small></div>
+        <div id="playlistInfo" class="playlist-info hidden"></div>
+
+        <div class="format-head">
+          <div><span class="eyebrow">FORMAT</span><h3>Select your format</h3></div>
+          <span class="hint">Choose the quality you want to download</span>
         </div>
-      </div>
+        <div class="mode-tabs" role="tablist">
+          <button class="mode active" data-kind="video">▣ &nbsp;Video</button>
+          <button class="mode" data-kind="audio">♫ &nbsp;Audio / MP3</button>
+        </div>
+        <div id="formats" class="formats"></div>
+        <p id="qualityAvailabilityNote" class="quality-note">Quality choices stay simple. NobiDownloader resolves the best matching source when you download.</p>
 
-      <aside class="right-column">
-        <article class="card status">
-          <div class="card-title"><h3>⌁ &nbsp; System Status</h3><span class="live">●</span></div>
-          <p>All systems ready</p>
-          <div class="status-row"><span>●</span><b>yt-dlp</b><em>Ready</em></div>
-          <div class="status-row"><span>●</span><b>FFmpeg</b><em>Ready</em></div>
-          <div class="status-row"><span>●</span><b>Backend</b><em>Running</em></div>
-          <div class="status-row"><span>●</span><b>Storage</b><em>Ready</em></div>
-          <div class="status-row"><span>●</span><b>Network</b><em>Online</em></div>
-        </article>
+        <div class="destination">
+          <div class="dest-icon">⌂</div>
+          <div class="dest-copy"><span>DOWNLOAD LOCATION</span><b id="savePathLabel">NobiDownloader\downloads</b><small id="pathStatus">Default download folder</small></div>
+          <input id="savePath" type="text" aria-label="Download folder path" placeholder="Default: NobiDownloader\downloads">
+          <button id="chooseFolder" class="outline">Change</button>
+        </div>
+        <div id="playlistHint" class="info-note hidden">ⓘ A folder named after the playlist will be created automatically inside your selected download location.</div>
 
-        <article class="card recent">
-          <div class="card-title"><h3>Recent Downloads</h3><button id="viewAll">View All →</button></div>
-          <div id="recentList" class="recent-list"><div class="recent-empty">No downloads yet.</div></div>
-        </article>
+        <div class="download-row">
+          <button id="download" class="primary download-btn">↓ &nbsp; Download Now</button>
+          <span id="downloadSummary">Ready when you are.</span>
+        </div>
+      </section>
 
-        <article class="card storage">
-          <div class="storage-title"><span>▣</span><div><h3>Storage</h3><small id="storagePath">Loading…</small></div></div>
-          <div class="storage-meter"><i id="storageMeterFill"></i></div>
-          <div class="storage-meta"><span id="storageUsed">Checking disk…</span><b id="storagePercent">—</b></div>
-          <button id="openFolder" class="folder-btn">▣ &nbsp; Open Download Folder <span>↗</span></button>
-        </article>
-      </aside>
+      <section class="home-lower">
+        <div class="mini-card">
+          <span class="mini-icon">⚡</span><div><b>Keep it simple</b><small>Analyze first, then choose only what you need.</small></div>
+        </div>
+        <div class="mini-card">
+          <span class="mini-icon">◌</span><div><b>Runs locally</b><small>yt-dlp + FFmpeg do the work on your machine.</small></div>
+        </div>
+        <div class="mini-card"><span class="mini-icon">⌁</span><div><b>Easy on the eyes</b><small>Soft surfaces, gentle contrast and spacious controls.</small></div></div>
+        <a class="mini-card github-love" href="https://github.com/NavajyotiBayan/NobiDownloader" target="_blank" rel="noopener"><span class="mini-icon">★</span><div><b>Like NobiDownloader?</b><small>Please star the project on GitHub — it really helps.</small></div><span class="github-arrow">↗</span></a>
+      </section>
     </section>
-    <div class="terminal-disclaimer" role="note">
-      <span class="terminal-dot"></span>
-      <div><b>NobiDownloader is running locally</b><small>Keep this terminal window open while using the web app. Closing the terminal will stop the local server.</small></div>
-    </div>
+
+    <section class="view" id="view-downloads">
+      <div class="page-heading"><span class="eyebrow">YOUR LIBRARY</span><h1>Downloads</h1><p>Everything saved by NobiDownloader, shown from your local downloads folder.</p></div>
+      <div class="library-toolbar"><span id="downloadCount">0 files</span><button id="refreshDownloads" class="outline">↻ Refresh</button><button id="openFolder" class="primary">⌂ Open Folder</button></div>
+      <div id="downloadsList" class="list-card"><div class="empty-state"><strong>No downloads yet</strong><span>Your completed files will appear here.</span></div></div>
+    </section>
+
+    <section class="view" id="view-playlists">
+      <div class="page-heading"><span class="eyebrow">ORGANIZE</span><h1>Playlists</h1><p>Playlist downloads are grouped into folders named after the playlist.</p></div>
+      <div id="playlistsList" class="playlist-grid"><div class="empty-state"><strong>No playlist downloads yet</strong><span>Analyze a YouTube playlist from Home to get started.</span></div></div>
+    </section>
+
+    <section class="view" id="view-settings">
+      <div class="page-heading"><span class="eyebrow">PREFERENCES</span><h1>Settings</h1><p>Keep the experience comfortable for longer download sessions.</p></div>
+      <div class="settings-grid">
+        <article class="settings-card"><div><b>Eye-comfort theme</b><span>Choose a soft palette. Your choice is saved locally.</span></div><div class="theme-swatches" id="themeSwatches"></div></article>
+        <article class="settings-card server-card"><div><b>Local server</b><span>NobiDownloader runs at <code>127.0.0.1:8765</code>. You can safely stop the server when you are finished.</span></div><div class="server-actions"><span id="serverStatus" class="status-chip">● Running</span><button id="stopServer" class="danger-outline" type="button">Stop Server</button></div></article>
+        <article class="settings-card"><div><b>Privacy</b><span>Downloads and downloaded files stay on this computer.</span></div><span class="status-chip">✓ Local only</span></article>
+      </div>
+    </section>
+
+    <div class="terminal-note"><span>●</span><div><b>NobiDownloader is running locally</b><small>Keep the terminal window open while using the web app. Closing the terminal stops the local server.</small></div></div>
+    <footer><b>▶ NobiDownloader</b><span>Good Content Goes Further</span><span>Built with yt-dlp + FFmpeg</span><span>V1.1 Prototype</span><a href="https://github.com/NavajyotiBayan/NobiDownloader" target="_blank" rel="noopener">★ Star on GitHub</a></footer>
   </main>
+</div>
 
-<footer><b>▶ NobiDownloader</b><span>Download Freedom</span><span>Built with yt-dlp + FFmpeg</span><span>V1 Beta</span><span class="footer-live">● Local &amp; Ready</span></footer>
+<div id="analyzeModal" class="analysis-modal hidden" aria-live="polite" aria-label="Analyzing URL">
+  <div class="analysis-backdrop"></div>
+  <div class="analysis-card">
+    <div class="analysis-orbit"><span></span><span></span><span></span><div class="analysis-core"><img src="/static/assets/nobi-logo.png" alt="NobiDownloader logo"></div></div>
+    <span class="eyebrow">NOBI IS LOOKING</span>
+    <h2 id="analysisTitle">Reading your link</h2>
+    <p id="analysisText">Checking the source and preparing your media workspace.</p>
+    <div class="analysis-steps">
+      <div class="analysis-step active" data-step="0"><span>01</span><b>Check link</b></div>
+      <div class="analysis-step" data-step="1"><span>02</span><b>Read media</b></div>
+      <div class="analysis-step" data-step="2"><span>03</span><b>Find formats</b></div>
+      <div class="analysis-step" data-step="3"><span>04</span><b>Prepare options</b></div>
+    </div>
+    <div class="analysis-breathe"><i></i><span>Take a breath — almost there</span></div>
+    <button id="cancelAnalysis" class="analysis-cancel" type="button">Cancel analysis</button>
+  </div>
 </div>
 
 <div id="downloadModal" class="modal hidden">
   <div class="modal-backdrop"></div>
-  <div class="download-dialog">
-    <div class="modal-glow"></div>
-    <div class="loader-ring"><span></span></div>
-    <small id="modalState">DOWNLOADING</small>
+  <div class="modal-card">
+    <button class="modal-close hidden" id="closeModal" aria-label="Close">×</button>
+    <div class="modal-check" id="modalCheck">↓</div>
+    <span id="modalState" class="eyebrow">DOWNLOADING</span>
     <h2 id="modalTitle">Preparing your download</h2>
     <p id="modalFile">Starting…</p>
-    <div class="big-percent"><span id="modalPercent">0</span><small>%</small></div>
-    <div class="progress"><i id="modalProgress"></i><b></b></div>
-    <div class="modal-stats"><span id="modalSpeed">—</span><span id="modalEta">ETA —</span></div>
-    <div class="modal-destination"><span>▣</span><div><small>SAVE LOCATION</small><b id="modalPath">Default download folder</b></div></div>
-    <div id="completeActions" class="complete-actions hidden"><button id="openComplete" class="download-btn">▣ &nbsp; Open Download Folder</button><button id="closeComplete" class="small-btn">Done</button></div>
+    <div id="modalItem" class="modal-item"></div>
+    <div class="percent"><b id="modalPercent">0</b><span>%</span></div>
+    <div class="progress"><i id="modalProgress"></i></div>
+    <div class="modal-stats modal-stats-grid"><span id="modalSize">Preparing file…</span></div>
+    <div class="modal-meter-note"><span class="live-dot"></span><span>Download progress is updated live from yt-dlp.</span></div>
+    <button id="cancelDownload" class="download-cancel" type="button">Cancel Download</button>
+    <div class="modal-destination"><span>⌂</span><div><small>SAVE LOCATION</small><b id="modalPath">NobiDownloader\downloads</b></div></div>
+    <div id="completeActions" class="modal-actions hidden"><button id="openComplete" class="primary">⌂ Open Download Folder</button><button id="closeComplete" class="outline">Done</button></div>
   </div>
 </div>
-
-<script src="/static/app.js?v=align13"></script>
+<script src="/static/app.js?v=v11-logo1"></script>
 </body>
 </html>
