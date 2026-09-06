@@ -1,7 +1,7 @@
 # NobiDownloader
 
 <p align="center">
-  <img src="app/frontend/assets/nobi-logo.png" width="110" alt="NobiDownloader">
+  <img src="app/frontend/assets/nobi-brand-lockup.png" width="110" alt="NobiDownloader">
 </p>
 
 <h2 align="center">Simple. Private. Yours.</h2>
