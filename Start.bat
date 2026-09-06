@@ -1,11 +1,11 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title Local Media Downloader - V1 Beta
+title NobiDownloader - V1.1 Prototype
 cd /d "%~dp0"
 
 echo.
 echo ================================================================
-echo              NOBIDOWNLOADER - V1 BETA
+echo              NOBIDOWNLOADER - V1.1 PROTOTYPE
 echo ================================================================
 echo.
 
@@ -74,7 +74,7 @@ exit /b 0
 :error
 echo.
 echo ================================================================
-echo ERROR: NobiDownloader V1 Beta could not start or was stopped.
+echo ERROR: NobiDownloader V1.1 could not start or was stopped.
 echo ================================================================
 echo.
 echo See: %LOG%
