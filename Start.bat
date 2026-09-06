@@ -5,7 +5,7 @@ cd /d "%~dp0"
 
 echo.
 echo ================================================================
-echo              NOBIDOWNLOADER - V1.1 PROTOTYPE
+echo              NOBIDOWNLOADER - V1.1 BETA
 echo ================================================================
 echo.
 
