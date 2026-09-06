@@ -25,9 +25,25 @@ YTDLP = TOOLS / "yt-dlp.exe"
 FFMPEG = TOOLS / "ffmpeg" / "bin" / "ffmpeg.exe"
 DEFAULT_DOWNLOADS.mkdir(exist_ok=True)
 
-app = FastAPI(title="NobiDownloader", version="1.0.0-beta")
+app = FastAPI(title="NobiDownloader", version="1.1.0-prototype")
 app.mount("/static", StaticFiles(directory=FRONTEND), name="static")
 jobs = {}
+UVICORN_SERVER = None
+
+
+@app.get("/")
+def home():
+    # Serve the dashboard at the URL opened by Start.bat.
+    return FileResponse(FRONTEND / "index.html")
+
+
+@app.get("/favicon.ico")
+def favicon():
+    # Avoid a noisy 404 in the browser developer console.
+    icon = FRONTEND / "favicon.ico"
+    if icon.exists():
+        return FileResponse(icon)
+    raise HTTPException(404, "Favicon not configured.")
 
 class AnalyzeRequest(BaseModel):
     url: str
@@ -40,9 +56,25 @@ class DownloadRequest(BaseModel):
     save_path: Optional[str] = None
     is_playlist: bool = False
     playlist_title: Optional[str] = None
+    playlist_count: int = 0
 
 class FolderRequest(BaseModel):
     path: str
+
+
+def _parse_json_result(result):
+    try:
+        return json.loads(result.stdout)
+    except Exception:
+        # yt-dlp may emit informational lines; use the last JSON-looking line.
+        for line in reversed(result.stdout.splitlines()):
+            line=line.strip()
+            if line.startswith("{") and line.endswith("}"):
+                try:
+                    return json.loads(line)
+                except Exception:
+                    pass
+    return None
 
 
 def run_ytdlp(args, allow_playlist=False):
@@ -86,183 +118,82 @@ def normalize_requested_quality(quality):
         return {"2k":"1440p", "4k":"2160p"}.get(quality.lower(), quality.lower())
     return quality
 
-@app.get("/")
-def index():
-    return FileResponse(FRONTEND / "index.html")
 
-@app.get("/api/health")
-def health():
-    return {"status":"ok","version":app.version,"yt_dlp":YTDLP.exists(),"ffmpeg":FFMPEG.exists()}
+ALLOWED_VIDEO_QUALITIES = {"best", "360p", "480p", "720p", "1080p", "1440p", "2160p"}
 
-@app.post("/api/select-folder")
-@app.post("/api/choose-folder")
-def select_folder():
-    if os.name != "nt":
-        raise HTTPException(400, "Native Windows folder picker is only available on Windows.")
 
-    ps = r"""
-$ErrorActionPreference = "Stop"
-try {
-  $shell = New-Object -ComObject Shell.Application
-  $folder = $shell.BrowseForFolder(0, "Choose NobiDownloader download folder", 0x0051, 0)
-  if ($null -ne $folder) {
-    $path = $folder.Self.Path
-    if ($path) {
-      [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-      Write-Output $path
-    }
-  }
-} catch {
-  [Console]::Error.WriteLine($_.Exception.Message)
-  exit 2
-}
-"""
-    try:
-        proc = subprocess.run(
-            ["powershell.exe", "-NoProfile", "-NonInteractive", "-STA", "-Command", ps],
-            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300
-        )
-        if proc.returncode != 0:
-            raise HTTPException(500, proc.stderr.strip() or "Native folder picker failed.")
-        output = proc.stdout.strip()
-        path = output.splitlines()[-1].strip() if output else ""
-        if not path:
-            return {"path": "", "cancelled": True}
-        p = Path(path)
-        if not p.is_dir():
-            raise HTTPException(400, "The selected location is not a folder.")
-        return {"path": str(p.resolve()), "cancelled": False}
-    except subprocess.TimeoutExpired:
-        raise HTTPException(408, "Folder picker timed out.")
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(500, f"Could not open the Windows folder picker: {exc}")
+def build_format_selector(req):
+    quality = normalize_requested_quality(req.quality)
+    if req.mode == "audio":
+        if isinstance(quality, str) and quality.isdigit():
+            # Audio selection is explicitly capped at the selected bitrate.
+            return f"bestaudio[abr<={quality}]"
+        return "bestaudio"
+    if isinstance(quality, str) and quality in ALLOWED_VIDEO_QUALITIES:
+        if quality == "best":
+            return "bestvideo+bestaudio/best"
+        h = int(quality[:-1])
+        # Never fall back to an unrestricted/better-than-selected format.
+        # The final alternative is still capped at the requested height.
+        return f"bestvideo[height<={h}]+bestaudio/best[height<={h}]"
+    raise ValueError(f"Unsupported video quality: {quality}")
 
-@app.post("/api/choose-folder")
-def select_folder():
-    """Open a real Windows folder chooser and return the selected absolute path."""
-    scripts = [
-        # Shell.Application is a reliable Windows-native folder picker and works without tkinter.
-        r"$shell=New-Object -ComObject Shell.Application; $folder=$shell.BrowseForFolder(0,'Choose NobiDownloader download folder',0,0); if($folder){[Console]::Write($folder.Self.Path)}",
-        # Fallback to WinForms if the COM picker is unavailable.
-        r"Add-Type -AssemblyName System.Windows.Forms; $dialog=New-Object System.Windows.Forms.FolderBrowserDialog; $dialog.Description='Choose NobiDownloader download folder'; $dialog.ShowNewFolderButton=$true; if($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK){[Console]::Write($dialog.SelectedPath)}",
-    ]
-    errors = []
-    for ps in scripts:
-        try:
-            result = subprocess.run(
-                ["powershell.exe", "-NoProfile", "-STA", "-ExecutionPolicy", "Bypass", "-Command", ps],
-                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120
-            )
-            path = result.stdout.strip()
-            if result.returncode == 0 and path:
-                selected = Path(clean_windows_path(path))
-                if selected.exists() and selected.is_dir():
-                    return {"path": str(selected.resolve())}
-            errors.append(result.stderr.strip() or "Folder selection was cancelled or unavailable.")
-        except Exception as exc:
-            errors.append(str(exc))
-    raise HTTPException(500, "Could not open the Windows folder picker. " + (errors[-1] if errors else "Try entering the folder path manually."))
-
-@app.post("/api/validate-folder")
-def validate_folder(req: FolderRequest):
-    try:
-        p = validate_save_path(req.path)
-        return {"ok": True, "path": str(p)}
-    except Exception as exc:
-        raise HTTPException(400, str(exc))
 
 @app.post("/api/analyze")
-def analyze(req: AnalyzeRequest):
+async def analyze(req: AnalyzeRequest):
     url = req.url.strip()
     if not re.match(r"^https?://", url, re.I):
-        raise HTTPException(400, "Please enter a valid http/https URL.")
+        raise HTTPException(400, "Invalid URL.")
 
-    # Treat an explicit YouTube playlist URL as a playlist first.  This is
-    # important for URLs such as https://www.youtube.com/playlist?list=...
-    # and watch URLs that also contain a list= parameter.
-    parsed_query = url.split("?", 1)[1] if "?" in url else ""
-    looks_like_playlist = bool(re.search(r"(?:^|&)list=[^&]+", parsed_query, re.I))
-
-    playlist_result = None
+    query = url.split("?", 1)[1] if "?" in url else ""
+    looks_like_playlist = bool(re.search(r"(?:^|&)list=[^&]+", query, re.I))
+    args = ["--dump-single-json", "--skip-download"]
     if looks_like_playlist:
-        playlist_result = run_ytdlp(
-            ["--yes-playlist", "--flat-playlist", "--dump-single-json", "--skip-download", url],
-            allow_playlist=True,
-        )
+        args += ["--yes-playlist", "--flat-playlist"]
     else:
-        # A generic URL can still be a playlist on another supported site, so
-        # keep the old playlist-first detection as a fallback.
-        playlist_result = run_ytdlp(
-            ["--yes-playlist", "--flat-playlist", "--dump-single-json", "--skip-download", url],
-            allow_playlist=True,
-        )
+        args += ["--no-playlist"]
 
-    if playlist_result.returncode == 0:
-        raw_json = playlist_result.stdout
-    else:
-        # Fall back to normal single-video analysis for URLs that are not playlists.
-        result = run_ytdlp(["--dump-single-json", "--skip-download", url])
-        if result.returncode != 0:
-            raise HTTPException(422, (result.stderr or result.stdout).strip()[-1500:] or "Could not analyze this URL.")
-        raw_json = result.stdout
+    result = run_ytdlp(args + [url], allow_playlist=looks_like_playlist)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "Could not analyze this URL.").strip().splitlines()[-1]
+        raise HTTPException(400, detail[:500])
 
-    try:
-        data = json.loads(raw_json)
-    except json.JSONDecodeError:
-        raise HTTPException(502, "The media extractor returned invalid metadata.")
+    data = _parse_json_result(result)
+    if not data:
+        raise HTTPException(400, "Could not read media information from this URL.")
 
     entries = data.get("entries") or []
-    is_playlist = data.get("_type") == "playlist" or bool(entries) or looks_like_playlist
-    playlist_entries = [e for e in entries if e]
-    playlist_count = len(playlist_entries) if is_playlist else 0
-    playlist_title = data.get("playlist_title") if is_playlist else None
-    if is_playlist and not playlist_title:
-        playlist_title = data.get("title")
-
-    # For YouTube watch URLs that contain a list= parameter, yt-dlp can return
-    # the video metadata as the top-level object. Fetch the playlist_title
-    # explicitly so the output folder always uses the real playlist name.
-    if is_playlist and looks_like_playlist:
-        try:
-            title_result = run_ytdlp(
-                ["--yes-playlist", "--flat-playlist", "--playlist-end", "1",
-                 "--print", "%(playlist_title)s", "--skip-download", url],
-                allow_playlist=True,
-            )
-            printed_titles = [line.strip() for line in title_result.stdout.splitlines()
-                              if line.strip() and line.strip().lower() not in {"none", "null"}]
-            if printed_titles:
-                playlist_title = printed_titles[0]
-        except Exception:
-            pass
-
-    if is_playlist and playlist_count == 0:
-        raise HTTPException(422, "The playlist was detected, but no available videos were found.")
-
-    formats=[]
-    for f in data.get("formats", []):
-        if not f.get("format_id"):
-            continue
+    playlist_count = len(entries)
+    is_playlist = looks_like_playlist and playlist_count > 0
+    formats = []
+    for f in (data.get("formats") or []):
         formats.append({
-            "id": str(f.get("format_id")), "ext": f.get("ext"),
-            "resolution": f.get("resolution") or (f"{f.get('width')}x{f.get('height')}" if f.get('width') and f.get('height') else None),
-            "width": f.get("width"), "height": f.get("height"), "fps": f.get("fps"),
-            "filesize": parse_size(f.get("filesize") or f.get("filesize_approx")),
-            "vcodec": f.get("vcodec"), "acodec": f.get("acodec"), "tbr": f.get("tbr"), "abr": f.get("abr")
+            "format_id": f.get("format_id"),
+            "height": f.get("height"),
+            "width": f.get("width"),
+            "ext": f.get("ext"),
+            "vcodec": f.get("vcodec"),
+            "acodec": f.get("acodec"),
+            "abr": f.get("abr"),
+            "filesize": f.get("filesize") or f.get("filesize_approx"),
         })
-    heights=sorted({int(f["height"]) for f in formats if f.get("height") and f.get("vcodec") not in (None,"none")}, reverse=True)
-    abr_values=sorted({round(float(f["abr"])) for f in formats if f.get("abr") and f.get("acodec") not in (None,"none")}, reverse=True)
-    display_title = playlist_title if is_playlist and playlist_title else (data.get("title") or "Untitled")
+
+    playlist_title = data.get("title") if is_playlist else data.get("playlist_title")
+    if is_playlist and entries:
+        playlist_title = data.get("title") or data.get("playlist_title")
+
     return {
-        "title": display_title, "uploader": data.get("uploader") or data.get("channel") or "",
-        "duration": data.get("duration"), "thumbnail": data.get("thumbnail"), "webpage_url": url,
-        "extractor": data.get("extractor_key") or data.get("extractor"), "formats": formats,
-        "video_resolutions": heights, "audio_bitrates": abr_values,
-        "is_playlist": is_playlist, "playlist_count": playlist_count,
-        "playlist_title": playlist_title,
+        "title": data.get("title") or "Untitled media",
+        "uploader": data.get("uploader") or data.get("channel") or "",
+        "duration": data.get("duration"),
+        "thumbnail": data.get("thumbnail") or "",
+        "extractor": data.get("extractor_key") or data.get("extractor") or "MEDIA",
+        "is_playlist": is_playlist,
+        "playlist_count": playlist_count if is_playlist else 0,
+        "playlist_title": playlist_title if is_playlist else None,
+        "formats": formats,
     }
+
 
 @app.post("/api/download")
 async def download(req: DownloadRequest):
@@ -275,13 +206,26 @@ async def download(req: DownloadRequest):
     if re.search(r"(?:^|&)list=[^&]+", req.url.split("?", 1)[1] if "?" in req.url else "", re.I):
         req.is_playlist = True
 
+    try:
+        selected_selector = build_format_selector(req)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
     job_id=uuid.uuid4().hex[:10]
-    jobs[job_id]={"status":"queued","progress":0.0,"speed":"","eta":"","filename":"","path":"","save_path":str(save_dir),"error":"","title":""}
+    jobs[job_id]={
+        "status":"queued", "progress":0.0, "filename":"", "path":"",
+        "save_path":str(save_dir), "error":"", "title":"", "size":None,
+        "size_text":"", "selected_mode":req.mode, "selected_quality":req.quality,
+        "selected_selector":selected_selector, "total_items": int(req.playlist_count or 0),
+        "completed_items": 0, "current_item": 0, "current_progress": 0.0,
+        "downloaded_text": "", "cancel_requested": False
+    }
     asyncio.create_task(download_job(job_id, req, save_dir))
     return {"job_id":job_id,"save_path":str(save_dir)}
 
 async def download_job(job_id, req, save_dir: Path):
     jobs[job_id]["status"]="downloading"
+    jobs[job_id]["title"] = req.playlist_title or ""
     quality = normalize_requested_quality(req.quality)
     is_playlist = bool(req.is_playlist)
     playlist_title = req.playlist_title
@@ -305,26 +249,14 @@ async def download_job(job_id, req, save_dir: Path):
     playlist_dir = save_dir / sanitize_folder_name(playlist_title) if is_playlist else save_dir
     playlist_dir.mkdir(parents=True, exist_ok=True)
 
+    fmt = build_format_selector(req)
     if req.mode=="audio":
-        # Audio quality is handled separately by yt-dlp's audio-quality option.
-        # Keep the existing bitrate-aware selection for MP3.
         if isinstance(quality, str) and quality.isdigit():
-            fmt=f"bestaudio[abr<={quality}]/bestaudio/best"
-            post=["--extract-audio","--audio-format","mp3","--audio-quality",quality]
+            # Explicitly encode MP3 at the bitrate the user selected.
+            post=["--extract-audio","--audio-format","mp3","--audio-quality",f"{quality}K"]
         else:
-            fmt="bestaudio/best"
-            post=["--extract-audio","--audio-format","mp3","--audio-quality","0"]
-    elif req.format_id:
-        fmt=req.format_id
-        post=["--merge-output-format","mp4"]
-    elif isinstance(quality, str) and quality.endswith("p") and quality[:-1].isdigit():
-        # IMPORTANT: never fall back to unrestricted 'best' here.
-        # A requested resolution must remain at or below that resolution.
-        h=int(quality[:-1])
-        fmt=f"bestvideo[height<={h}]+bestaudio/best[height<={h}]"
-        post=["--merge-output-format","mp4"]
+            post=["--extract-audio","--audio-format","mp3"]
     else:
-        fmt="bestvideo+bestaudio/best"
         post=["--merge-output-format","mp4"]
     if is_playlist:
         # Keep every playlist download grouped in a folder named after the playlist.
@@ -334,23 +266,79 @@ async def download_job(job_id, req, save_dir: Path):
     else:
         outtmpl=str(save_dir / "%(title).180B [%(id)s].%(ext)s")
         playlist_args=["--no-playlist"]
+    # yt-dlp emits the real transfer percentage. For playlists, convert each
+    # video's percentage into one continuous overall percentage so the UI never
+    # jumps back to 0% when the next item starts.
+    if is_playlist and jobs[job_id]["total_items"] <= 0:
+        try:
+            count_result = run_ytdlp(
+                ["--yes-playlist", "--flat-playlist", "--print", "%(playlist_index)s", "--skip-download", req.url],
+                allow_playlist=True,
+            )
+            indexes = []
+            for line in count_result.stdout.splitlines():
+                line=line.strip()
+                if line.isdigit(): indexes.append(int(line))
+            if indexes:
+                jobs[job_id]["total_items"] = max(indexes)
+        except Exception:
+            pass
+
     cmd=[str(YTDLP),"--newline","--ffmpeg-location",str(FFMPEG),"-f",fmt,"-o",outtmpl]+playlist_args+post+[req.url]
     proc=await asyncio.create_subprocess_exec(*cmd,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.STDOUT)
+    jobs[job_id]["process"] = proc
     async for raw in proc.stdout:
         line=raw.decode("utf-8",errors="replace").strip()
-        m=re.search(r"\[download\]\s+(\d+(?:\.\d+)?)%.*?(?:at\s+([^\s]+))?.*?(?:ETA\s+([^\s]+))?",line)
+
+        item_m=re.search(r"Downloading item (\d+) of (\d+)",line,re.I)
+        if item_m:
+            jobs[job_id]["current_item"] = int(item_m.group(1))
+            jobs[job_id]["total_items"] = int(item_m.group(2))
+            jobs[job_id]["completed_items"] = max(0, int(item_m.group(1))-1)
+
+        m=re.search(r"\[download\]\s+(\d+(?:\.\d+)?)%",line)
         if m:
-            jobs[job_id]["progress"]=float(m.group(1)); jobs[job_id]["speed"]=m.group(2) or jobs[job_id]["speed"]; jobs[job_id]["eta"]=m.group(3) or jobs[job_id]["eta"]
+            pct=float(m.group(1))
+            jobs[job_id]["current_progress"] = pct
+            if is_playlist and jobs[job_id]["total_items"]:
+                total=jobs[job_id]["total_items"]
+                item=max(1,jobs[job_id]["current_item"])
+                overall=((item-1)+(pct/100.0))/total*100.0
+                # Keep 100% for the actual completion state only.
+                jobs[job_id]["progress"] = min(99.8, overall)
+            else:
+                jobs[job_id]["progress"] = min(99.8, pct)
+
+        # Optional transfer-size hint. yt-dlp usually prints: "X% of Y".
+        size_m=re.search(r"\[download\].*?([0-9.]+(?:KiB|MiB|GiB|KB|MB|GB))\s+at\s",line,re.I)
+        if size_m:
+            jobs[job_id]["downloaded_text"] = size_m.group(1)
+
         dm=re.search(r"Destination:\s+(.+)$",line)
         if dm: jobs[job_id]["filename"]=Path(dm.group(1)).name; jobs[job_id]["path"]=dm.group(1)
         fm=re.search(r'Merging formats into\s+"(.+?)"',line)
         if fm: jobs[job_id]["filename"]=Path(fm.group(1)).name; jobs[job_id]["path"]=fm.group(1)
+
     code=await proc.wait()
+    jobs[job_id].pop("process", None)
+    if jobs[job_id].get("cancel_requested"):
+        jobs[job_id]["status"]="stopped"
+        jobs[job_id]["error"]="Download cancelled by user."
+        jobs[job_id]["progress"] = min(float(jobs[job_id].get("progress") or 0), 99.8)
+        return
     if code==0:
         if not jobs[job_id]["path"]:
             candidates=sorted([p for p in playlist_dir.rglob("*") if p.is_file()],key=lambda p:p.stat().st_mtime,reverse=True)
             if candidates: jobs[job_id]["path"]=str(candidates[0]); jobs[job_id]["filename"]=candidates[0].name
         jobs[job_id]["progress"]=100; jobs[job_id]["status"]="complete"
+        if jobs[job_id].get("path"):
+            try:
+                actual = Path(jobs[job_id]["path"]).stat().st_size
+                jobs[job_id]["size"] = actual
+                jobs[job_id]["size_text"] = human_size(actual)
+                jobs[job_id]["downloaded"] = human_size(actual)
+            except Exception:
+                pass
     else:
         jobs[job_id]["status"]="error"; jobs[job_id]["error"]="Download failed. Check the URL, access permissions, or terminal output."
 
@@ -358,6 +346,30 @@ async def download_job(job_id, req, save_dir: Path):
 def job_status(job_id:str):
     if job_id not in jobs: raise HTTPException(404,"Job not found.")
     return jobs[job_id]
+
+
+@app.post("/api/jobs/{job_id}/cancel")
+async def cancel_job(job_id: str):
+    if job_id not in jobs:
+        raise HTTPException(404, "Job not found.")
+    job = jobs[job_id]
+    if job.get("status") in {"complete", "error", "stopped"}:
+        return {"ok": True, "status": job.get("status")}
+    job["cancel_requested"] = True
+    proc = job.get("process")
+    if proc is not None:
+        try:
+            if proc.returncode is None:
+                proc.terminate()
+                try:
+                    await asyncio.wait_for(proc.wait(), timeout=2.0)
+                except asyncio.TimeoutError:
+                    proc.kill()
+        except Exception:
+            pass
+    job["status"] = "stopped"
+    job["error"] = "Download cancelled by user."
+    return {"ok": True, "status": "stopped"}
 
 
 @app.get("/api/storage")
@@ -398,6 +410,37 @@ def list_downloads():
             "path": str(p)
         })
     return items[:100]
+
+@app.post("/api/shutdown")
+async def shutdown_server():
+    """Safely stop active downloads and request Uvicorn to exit."""
+    active = []
+    for job in jobs.values():
+        if job.get("status") in {"queued", "downloading"} and job.get("process"):
+            active.append(job)
+
+    for job in active:
+        proc = job.get("process")
+        try:
+            if proc.returncode is None:
+                proc.terminate()
+        except Exception:
+            pass
+        job["cancel_requested"] = True
+        job["status"] = "stopped"
+        job["error"] = "Server stopped by user."
+
+    server = UVICORN_SERVER
+    if server is None:
+        raise HTTPException(503, "Server shutdown is not available yet.")
+
+    async def request_exit():
+        await asyncio.sleep(0.35)
+        server.should_exit = True
+
+    asyncio.create_task(request_exit())
+    return {"ok": True, "stopped_jobs": len(active)}
+
 
 @app.post("/api/open-folder")
 def open_folder(req: FolderRequest):
@@ -455,10 +498,12 @@ if __name__ == "__main__":
         force=True,
     )
 
-    uvicorn.run(
+    config = uvicorn.Config(
         app,
         host="127.0.0.1",
         port=8765,
         log_level="info",
         log_config=None,
     )
+    UVICORN_SERVER = uvicorn.Server(config)
+    UVICORN_SERVER.run()
