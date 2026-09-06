@@ -243,3 +243,43 @@ footer{
   .terminal-disclaimer{margin-top:14px;padding:10px 12px}
   footer{gap:9px}
 }
+
+
+/* NobiDownloader V1 Beta — GitHub button */
+.github-profile {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface2);
+  color: var(--text);
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  transition: transform .18s ease, background .18s ease,
+              border-color .18s ease, box-shadow .18s ease;
+}
+.github-profile svg {
+  width: 23px;
+  height: 23px;
+  display: block;
+  fill: currentColor;
+}
+.github-profile:hover {
+  transform: translateY(-1px);
+  background: var(--surface3);
+  border-color: var(--accent-a);
+  color: var(--accent-a);
+  box-shadow: 0 6px 18px rgba(0,0,0,.14);
+}
+.github-profile:active {
+  transform: translateY(0);
+}
+.github-profile:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent-a) 35%, transparent);
+  outline-offset: 2px;
+}
