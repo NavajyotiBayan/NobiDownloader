@@ -283,3 +283,10 @@ footer{
   outline: 3px solid color-mix(in srgb, var(--accent-a) 35%, transparent);
   outline-offset: 2px;
 }
+
+/* Playlist detection */
+.playlist-info{margin-top:10px;padding:10px 12px;border:1px solid #5b74a8;border-radius:11px;background:linear-gradient(100deg,rgba(103,215,255,.10),rgba(177,154,255,.10));display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:var(--text)}
+.playlist-info b{font-size:10px;padding:5px 8px;border-radius:8px;background:linear-gradient(100deg,#67d7ff,#b19aff);color:#11162a}
+.playlist-info span{font-size:9px;font-weight:700}
+.playlist-info small{width:100%;font-size:8px;color:var(--muted)}
+.playlist-info small strong{color:var(--text)}

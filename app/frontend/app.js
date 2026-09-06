@@ -101,7 +101,14 @@ async function analyze(){
   try{
     const r=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url})});
     const d=await r.json();if(!r.ok)throw Error(d.detail||"Analysis failed.");
-    current={url,...d};$("#thumb").src=d.thumbnail||"";$("#title").textContent=d.title||"Untitled media";$("#source").textContent=(d.extractor||"MEDIA").toUpperCase();$("#meta").textContent=[d.uploader,dur(d.duration)].filter(Boolean).join("  •  ");$("#qualityTag").textContent=(d.formats?.length||"Detected")+" formats";$("#mediaCard").classList.remove("hidden");renderFormats();msg("Media detected. Select a format and download.");
+    current={url,...d};$("#thumb").src=d.thumbnail||"";$("#title").textContent=d.title||"Untitled media";$("#source").textContent=(d.extractor||"MEDIA").toUpperCase();
+    const playlistMeta=d.is_playlist ? [`Playlist • ${d.playlist_count} videos`].filter(Boolean) : [d.uploader,dur(d.duration)].filter(Boolean);
+    $("#meta").textContent=playlistMeta.join("  •  ");
+    $("#mediaTypeTag").textContent=d.is_playlist?"Playlist":"Video";
+    $("#qualityTag").textContent=d.is_playlist ? `${d.playlist_count} videos` : ((d.formats?.length||"Detected")+" formats");
+    const pi=$("#playlistInfo");
+    if(d.is_playlist){ pi.classList.remove("hidden"); pi.innerHTML=`<b>Playlist detected</b><span>${esc(d.playlist_title||d.title)} · ${d.playlist_count} available videos</span><small>Downloads will be saved in <strong>downloads\\${esc(d.playlist_title||d.title)}</strong>.</small>`; } else { pi.classList.add("hidden"); pi.innerHTML=""; }
+    $("#mediaCard").classList.remove("hidden");renderFormats();msg(d.is_playlist?`Playlist detected: ${d.playlist_count} videos available. Select a format and download.`:"Media detected. Select a format and download.");
   }catch(e){$("#mediaCard").classList.add("hidden");msg(e.message,true)}finally{$("#analyze").disabled=false}
 }
 $("#analyze").onclick=analyze;
@@ -139,7 +146,7 @@ async function startDownload(){
   $("#download").disabled=true;
   openModal("DOWNLOADING","Preparing your download",current.title||"Media",selectedFolder||"Default download folder");
   try{
-    const r=await fetch("/api/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:current.url,mode,quality:selectedQuality,save_path:selectedFolder||undefined})});
+    const r=await fetch("/api/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:current.url,mode,quality:selectedQuality,save_path:selectedFolder||undefined,is_playlist:!!current.is_playlist,playlist_title:current.playlist_title||current.title})});
     const d=await r.json();if(!r.ok)throw Error(d.detail||"Could not start download.");
     watch(d.job_id);
   }catch(e){closeModal();msg(e.message,true);$("#download").disabled=false}
@@ -171,7 +178,10 @@ async function loadDownloads(){
     if(!items.length){
       $("#queue").innerHTML=`<div class="empty"><div>⇩</div><b>Your download queue is empty</b><small>Analyze a media URL to start downloading.</small></div>`;
     }else{
-      $("#queue").innerHTML=items.map(x=>`<div class="qrow"><div class="qthumb"></div><div class="qname"><b>${esc(x.name)}</b><small>Downloaded</small></div><div class="qprogress"><div><i style="width:100%"></i></div><small>${bytes(x.size)} · Complete</small></div><button class="qbtn">✓</button><button class="qbtn red">×</button></div>`).join("");
+      $("#queue").innerHTML=items.map(x=>{
+        const folder=x.folder?` · ${esc(x.folder)}`:"";
+        return `<div class="qrow"><div class="qthumb"></div><div class="qname"><b>${esc(x.name)}</b><small>Downloaded${folder}</small></div><div class="qprogress"><div><i style="width:100%"></i></div><small>${bytes(x.size)} · Complete</small></div><button class="qbtn">✓</button><button class="qbtn red">×</button></div>`;
+      }).join("");
     }
     const recent=items.slice(0,5);
     $("#recentList").innerHTML=recent.length?recent.map(x=>`<div class="recent-row"><div class="recent-img"></div><div><b>${esc(x.name)}</b><small>${bytes(x.size)} · Local</small></div><span>✓</span></div>`).join(""):`<div class="recent-empty">No downloads yet.</div>`;

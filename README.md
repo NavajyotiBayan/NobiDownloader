@@ -109,3 +109,7 @@ irm https://YOUR-DOMAIN/nobi | iex
 
 Before publishing, replace `YOUR-DOMAIN` with your actual domain and verify the
 repository URL inside `scripts/install.ps1`.
+
+## YouTube playlist handling
+
+NobiDownloader detects YouTube playlist URLs during analysis and shows the number of available videos before download. Playlist downloads are grouped automatically in a folder named after the playlist inside the selected download location (the default is `NobiDownloader\downloads`). Files are numbered by playlist order and include the video title and ID to reduce naming collisions.

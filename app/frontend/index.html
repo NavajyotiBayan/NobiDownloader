@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NobiDownloader</title>
-<link rel="stylesheet" href="/static/style.css?v=align13">
+<link rel="stylesheet" href="/static/style.css?v=playlist2">
 </head>
 <body>
 <div class="app">
@@ -72,7 +72,7 @@
               <span id="source">MEDIA</span>
               <h2 id="title">Media title</h2>
               <p id="meta"></p>
-              <div class="media-tags"><span>Video</span><span id="qualityTag">Detected</span></div>
+              <div class="media-tags"><span id="mediaTypeTag">Video</span><span id="qualityTag">Detected</span></div>
             </div>
             <div class="save-card">
               <div class="save-head"><span>▣</span><b>Save to</b></div>
@@ -87,6 +87,7 @@
               <button data-kind="audio">♫ &nbsp;Audio / MP3</button>
 
             </div>
+            <div id="playlistInfo" class="playlist-info hidden"></div>
             <div id="formats" class="formats"></div>
             <div class="advanced"><span>⚙ &nbsp; Advanced Options</span><span>⌄</span></div>
             <button id="download" class="download-btn">⇩ &nbsp; Download Now</button>

@@ -6,6 +6,9 @@ import re
 import subprocess
 import shutil
 import uuid
+import threading
+import webbrowser
+import logging
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
@@ -35,13 +38,18 @@ class DownloadRequest(BaseModel):
     mode: str = "video"
     quality: str = "best"
     save_path: Optional[str] = None
+    is_playlist: bool = False
+    playlist_title: Optional[str] = None
 
 class FolderRequest(BaseModel):
     path: str
 
 
-def run_ytdlp(args):
-    cmd = [str(YTDLP), "--no-playlist", "--no-warnings", "--ffmpeg-location", str(FFMPEG)] + args
+def run_ytdlp(args, allow_playlist=False):
+    cmd = [str(YTDLP)]
+    if not allow_playlist:
+        cmd.append("--no-playlist")
+    cmd += ["--no-warnings", "--ffmpeg-location", str(FFMPEG)] + args
     return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
 
 
@@ -66,6 +74,12 @@ def parse_size(v):
     except Exception:
         return None
 
+
+def sanitize_folder_name(name: Optional[str]) -> str:
+    value = (name or "Playlist").strip()
+    value = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", value)
+    value = re.sub(r'\s+', " ", value).strip(" .")
+    return (value or "Playlist")[:120]
 
 def normalize_requested_quality(quality):
     if isinstance(quality, str):
@@ -164,13 +178,68 @@ def analyze(req: AnalyzeRequest):
     url = req.url.strip()
     if not re.match(r"^https?://", url, re.I):
         raise HTTPException(400, "Please enter a valid http/https URL.")
-    result = run_ytdlp(["--dump-single-json", "--skip-download", url])
-    if result.returncode != 0:
-        raise HTTPException(422, (result.stderr or result.stdout).strip()[-1500:] or "Could not analyze this URL.")
+
+    # Treat an explicit YouTube playlist URL as a playlist first.  This is
+    # important for URLs such as https://www.youtube.com/playlist?list=...
+    # and watch URLs that also contain a list= parameter.
+    parsed_query = url.split("?", 1)[1] if "?" in url else ""
+    looks_like_playlist = bool(re.search(r"(?:^|&)list=[^&]+", parsed_query, re.I))
+
+    playlist_result = None
+    if looks_like_playlist:
+        playlist_result = run_ytdlp(
+            ["--yes-playlist", "--flat-playlist", "--dump-single-json", "--skip-download", url],
+            allow_playlist=True,
+        )
+    else:
+        # A generic URL can still be a playlist on another supported site, so
+        # keep the old playlist-first detection as a fallback.
+        playlist_result = run_ytdlp(
+            ["--yes-playlist", "--flat-playlist", "--dump-single-json", "--skip-download", url],
+            allow_playlist=True,
+        )
+
+    if playlist_result.returncode == 0:
+        raw_json = playlist_result.stdout
+    else:
+        # Fall back to normal single-video analysis for URLs that are not playlists.
+        result = run_ytdlp(["--dump-single-json", "--skip-download", url])
+        if result.returncode != 0:
+            raise HTTPException(422, (result.stderr or result.stdout).strip()[-1500:] or "Could not analyze this URL.")
+        raw_json = result.stdout
+
     try:
-        data = json.loads(result.stdout)
+        data = json.loads(raw_json)
     except json.JSONDecodeError:
         raise HTTPException(502, "The media extractor returned invalid metadata.")
+
+    entries = data.get("entries") or []
+    is_playlist = data.get("_type") == "playlist" or bool(entries) or looks_like_playlist
+    playlist_entries = [e for e in entries if e]
+    playlist_count = len(playlist_entries) if is_playlist else 0
+    playlist_title = data.get("playlist_title") if is_playlist else None
+    if is_playlist and not playlist_title:
+        playlist_title = data.get("title")
+
+    # For YouTube watch URLs that contain a list= parameter, yt-dlp can return
+    # the video metadata as the top-level object. Fetch the playlist_title
+    # explicitly so the output folder always uses the real playlist name.
+    if is_playlist and looks_like_playlist:
+        try:
+            title_result = run_ytdlp(
+                ["--yes-playlist", "--flat-playlist", "--playlist-end", "1",
+                 "--print", "%(playlist_title)s", "--skip-download", url],
+                allow_playlist=True,
+            )
+            printed_titles = [line.strip() for line in title_result.stdout.splitlines()
+                              if line.strip() and line.strip().lower() not in {"none", "null"}]
+            if printed_titles:
+                playlist_title = printed_titles[0]
+        except Exception:
+            pass
+
+    if is_playlist and playlist_count == 0:
+        raise HTTPException(422, "The playlist was detected, but no available videos were found.")
 
     formats=[]
     for f in data.get("formats", []):
@@ -185,11 +254,14 @@ def analyze(req: AnalyzeRequest):
         })
     heights=sorted({int(f["height"]) for f in formats if f.get("height") and f.get("vcodec") not in (None,"none")}, reverse=True)
     abr_values=sorted({round(float(f["abr"])) for f in formats if f.get("abr") and f.get("acodec") not in (None,"none")}, reverse=True)
+    display_title = playlist_title if is_playlist and playlist_title else (data.get("title") or "Untitled")
     return {
-        "title": data.get("title") or "Untitled", "uploader": data.get("uploader") or data.get("channel") or "",
-        "duration": data.get("duration"), "thumbnail": data.get("thumbnail"), "webpage_url": data.get("webpage_url") or url,
+        "title": display_title, "uploader": data.get("uploader") or data.get("channel") or "",
+        "duration": data.get("duration"), "thumbnail": data.get("thumbnail"), "webpage_url": url,
         "extractor": data.get("extractor_key") or data.get("extractor"), "formats": formats,
-        "video_resolutions": heights, "audio_bitrates": abr_values
+        "video_resolutions": heights, "audio_bitrates": abr_values,
+        "is_playlist": is_playlist, "playlist_count": playlist_count,
+        "playlist_title": playlist_title,
     }
 
 @app.post("/api/download")
@@ -198,6 +270,11 @@ async def download(req: DownloadRequest):
         raise HTTPException(400, "Invalid URL.")
     try: save_dir=validate_save_path(req.save_path)
     except ValueError as e: raise HTTPException(400,str(e))
+    # Keep playlist behavior safe even if a stale frontend state submits a
+    # YouTube list URL without is_playlist=true.
+    if re.search(r"(?:^|&)list=[^&]+", req.url.split("?", 1)[1] if "?" in req.url else "", re.I):
+        req.is_playlist = True
+
     job_id=uuid.uuid4().hex[:10]
     jobs[job_id]={"status":"queued","progress":0.0,"speed":"","eta":"","filename":"","path":"","save_path":str(save_dir),"error":"","title":""}
     asyncio.create_task(download_job(job_id, req, save_dir))
@@ -206,6 +283,27 @@ async def download(req: DownloadRequest):
 async def download_job(job_id, req, save_dir: Path):
     jobs[job_id]["status"]="downloading"
     quality = normalize_requested_quality(req.quality)
+    is_playlist = bool(req.is_playlist)
+    playlist_title = req.playlist_title
+
+    # Never create a literal generic "Playlist" folder when the URL can tell
+    # us the real YouTube playlist title. Resolve it again server-side.
+    if is_playlist and re.search(r"(?:^|&)list=[^&]+", req.url.split("?", 1)[1] if "?" in req.url else "", re.I):
+        try:
+            title_result = run_ytdlp(
+                ["--yes-playlist", "--flat-playlist", "--playlist-end", "1",
+                 "--print", "%(playlist_title)s", "--skip-download", req.url],
+                allow_playlist=True,
+            )
+            printed_titles = [line.strip() for line in title_result.stdout.splitlines()
+                              if line.strip() and line.strip().lower() not in {"none", "null"}]
+            if printed_titles:
+                playlist_title = printed_titles[0]
+        except Exception:
+            pass
+
+    playlist_dir = save_dir / sanitize_folder_name(playlist_title) if is_playlist else save_dir
+    playlist_dir.mkdir(parents=True, exist_ok=True)
 
     if req.mode=="audio":
         # Audio quality is handled separately by yt-dlp's audio-quality option.
@@ -228,8 +326,15 @@ async def download_job(job_id, req, save_dir: Path):
     else:
         fmt="bestvideo+bestaudio/best"
         post=["--merge-output-format","mp4"]
-    outtmpl=str(save_dir / "%(title).180B [%(id)s].%(ext)s")
-    cmd=[str(YTDLP),"--newline","--no-playlist","--ffmpeg-location",str(FFMPEG),"-f",fmt,"-o",outtmpl]+post+[req.url]
+    if is_playlist:
+        # Keep every playlist download grouped in a folder named after the playlist.
+        # playlist_index keeps the files in playlist order and title/id avoids collisions.
+        outtmpl=str(playlist_dir / "%(playlist_index)03d - %(title).160B [%(id)s].%(ext)s")
+        playlist_args=["--yes-playlist", "--ignore-errors"]
+    else:
+        outtmpl=str(save_dir / "%(title).180B [%(id)s].%(ext)s")
+        playlist_args=["--no-playlist"]
+    cmd=[str(YTDLP),"--newline","--ffmpeg-location",str(FFMPEG),"-f",fmt,"-o",outtmpl]+playlist_args+post+[req.url]
     proc=await asyncio.create_subprocess_exec(*cmd,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.STDOUT)
     async for raw in proc.stdout:
         line=raw.decode("utf-8",errors="replace").strip()
@@ -243,7 +348,7 @@ async def download_job(job_id, req, save_dir: Path):
     code=await proc.wait()
     if code==0:
         if not jobs[job_id]["path"]:
-            candidates=sorted([p for p in save_dir.iterdir() if p.is_file()],key=lambda p:p.stat().st_mtime,reverse=True)
+            candidates=sorted([p for p in playlist_dir.rglob("*") if p.is_file()],key=lambda p:p.stat().st_mtime,reverse=True)
             if candidates: jobs[job_id]["path"]=str(candidates[0]); jobs[job_id]["filename"]=candidates[0].name
         jobs[job_id]["progress"]=100; jobs[job_id]["status"]="complete"
     else:
@@ -262,7 +367,7 @@ def storage_info():
         target = DEFAULT_DOWNLOADS
         target.mkdir(parents=True, exist_ok=True)
         total, used, free = shutil.disk_usage(target)
-        files = [p for p in target.iterdir() if p.is_file()]
+        files = [p for p in target.rglob("*") if p.is_file()]
         download_bytes = sum(p.stat().st_size for p in files)
         return {
             "path": str(target.resolve()),
@@ -279,8 +384,19 @@ def storage_info():
 @app.get("/api/downloads")
 def list_downloads():
     items=[]
-    for p in sorted(DEFAULT_DOWNLOADS.iterdir(),key=lambda x:x.stat().st_mtime,reverse=True):
-        if p.is_file(): items.append({"name":p.name,"size":p.stat().st_size,"modified":p.stat().st_mtime,"path":str(p)})
+    for p in sorted((p for p in DEFAULT_DOWNLOADS.rglob("*") if p.is_file()),key=lambda x:x.stat().st_mtime,reverse=True):
+        try:
+            rel = p.relative_to(DEFAULT_DOWNLOADS)
+        except ValueError:
+            rel = p.name
+        items.append({
+            "name": p.name,
+            "relative_name": str(rel),
+            "folder": rel.parent.name if hasattr(rel, "parent") and str(rel.parent) != "." else "",
+            "size": p.stat().st_size,
+            "modified": p.stat().st_mtime,
+            "path": str(p)
+        })
     return items[:100]
 
 @app.post("/api/open-folder")
@@ -313,3 +429,36 @@ def open_folder(req: FolderRequest):
     except Exception as exc:
         raise HTTPException(500, f"Could not open the download folder: {exc}")
 
+
+
+if __name__ == "__main__":
+    # Run Uvicorn in this same Python process so the launcher console owns
+    # the server lifetime. Closing the launcher therefore closes the server.
+    def _open_browser():
+        try:
+            webbrowser.open("http://127.0.0.1:8765/")
+        except Exception:
+            pass
+
+    threading.Timer(1.0, _open_browser).start()
+
+    import uvicorn
+    log_path = ROOT / "logs" / "server.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler(log_path, encoding="utf-8"),
+        ],
+        force=True,
+    )
+
+    uvicorn.run(
+        app,
+        host="127.0.0.1",
+        port=8765,
+        log_level="info",
+        log_config=None,
+    )

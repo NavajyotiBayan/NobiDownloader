@@ -56,69 +56,25 @@ echo       OK
 
 echo [5/6] Starting local web server...
 echo       http://127.0.0.1:%PORT%
-
-rem IMPORTANT: server.py defines the FastAPI app; uvicorn must launch app:app.
-start "Local Media Server" /b cmd /c ^
-  ""%PY%" -m uvicorn backend.server:app --app-dir "%APP%" --host 127.0.0.1 --port %PORT% --log-level info > "%LOG%" 2>&1"
-
-echo       Waiting for server...
-
-set "READY="
-for /L %%N in (1,1,30) do (
-    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-      "try { $r=Invoke-WebRequest -UseBasicParsing -TimeoutSec 1 'http://127.0.0.1:%PORT%/api/health'; if($r.StatusCode -eq 200){exit 0}else{exit 1} } catch { exit 1 }"
-    if not errorlevel 1 (
-        set "READY=1"
-        goto :server_ready
-    )
-    timeout /t 1 /nobreak >nul
-)
-
-:server_ready
-if not defined READY (
-    echo.
-    echo ERROR: The local server did not start.
-    echo.
-    echo ---- server.log ----
-    type "%LOG%"
-    echo --------------------
-    goto :error
-)
-
-echo [6/6] Opening web app...
-start "" "http://127.0.0.1:%PORT%/"
 echo.
-echo ================================================================
-echo                  LOCAL MEDIA - READY
-echo ================================================================
-echo.
-echo  Web app : http://127.0.0.1:%PORT%/
-echo  Logs    : %LOG%
-echo.
-echo  Keep this window open while using the app.
-echo  Press CTRL+C here to stop the server.
-echo ================================================================
+echo       Starting server in this window...
+echo       Closing this window will stop NobiDownloader.
 echo.
 
-:monitor
-timeout /t 2 /nobreak >nul
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "try { $r=Invoke-WebRequest -UseBasicParsing -TimeoutSec 1 'http://127.0.0.1:%PORT%/api/health'; if($r.StatusCode -ne 200){exit 1}else{exit 0} } catch { exit 1 }"
-if errorlevel 1 (
-    echo.
-    echo Server stopped unexpectedly.
-    echo Check: %LOG%
-    echo.
-    type "%LOG%"
-    pause
-    exit /b 1
-)
-goto :monitor
+rem Run the FastAPI/Uvicorn server in the SAME Python process as this
+rem launcher. This prevents an orphaned server process. The server opens
+rem the browser automatically after startup.
+"%PY%" "%APP%\backend\server.py"
+
+rem When the Python server exits, return to the launcher so the console
+rem can close cleanly.
+if errorlevel 1 goto :error
+exit /b 0
 
 :error
 echo.
 echo ================================================================
-echo ERROR: V1 Beta could not start.
+echo ERROR: NobiDownloader V1 Beta could not start or was stopped.
 echo ================================================================
 echo.
 echo See: %LOG%
