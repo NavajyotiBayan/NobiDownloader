@@ -1,115 +1,152 @@
 # NobiDownloader
 
-**Local Media Workstation for Windows**
+<p align="center">
+  <img src="app/frontend/assets/nobi-logo.png" width="110" alt="NobiDownloader">
+</p>
 
-NobiDownloader is a locally running web app for downloading supported online
-media as video or MP3 using **yt-dlp** and **FFmpeg**.
+<h2 align="center">Simple. Private. Yours.</h2>
 
-## Highlights
+<p align="center">
+  A calm, local-first media downloader powered by yt-dlp and FFmpeg.
+</p>
 
-- Clean Material-inspired local web interface
-- Video quality presets: Best Available, 360p, 480p, 720p, 1080p, 2K and 4K
-- MP3/audio downloading
-- Custom download folder selection
-- Download progress modal
-- Download completion card with Open Folder
-- Five eye-comfort themes
-- Local-only server workflow
-- Automatic dependency setup through the included launcher
+<p align="center">
+  <a href="https://github.com/NavajyotiBayan/NobiDownloader">⭐ Star on GitHub</a>
+  ·
+  <a href="https://github.com/NavajyotiBayan/NobiDownloader/issues">Report an Issue</a>
+</p>
 
-## Requirements
+---
 
-- Windows 10/11
-- Internet connection for downloading media and required dependencies
-- PowerShell
-- Python is installed/managed by the included launcher as supported by this build
+## 🌿 NobiDownloader
 
-## How to use — Method 1: Start locally
+NobiDownloader makes downloading videos, playlists, and MP3s simple.
 
-1. Download or clone this repository.
-2. Open the NobiDownloader project folder.
-3. Run **Start NobiDownloader.bat** (or the included start/launcher BAT file).
-4. Allow the launcher to install/check required dependencies if prompted.
-5. Keep the terminal window open while using NobiDownloader.
-6. Open the local address shown by the launcher in your browser.
-7. Paste a supported media URL, choose Video/MP3 and the desired quality.
-8. Choose the save folder if needed and press **Download Now**.
+Everything runs locally on your Windows computer — paste a URL, choose your quality, and download.
 
-## How to use — Method 2: GitHub PowerShell installer
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" width="100%" alt="NobiDownloader Dashboard">
+</p>
 
-If this project is published to GitHub with the included installer script,
-open PowerShell and run the repository's published install command.
+### ✨ Features
 
-Example:
+- 🎬 Video downloads up to 4K
+- 🎵 MP3 downloads up to 320 kbps
+- 📋 YouTube playlist support
+- 🎚️ Simple quality ladder with smart fallback
+- 📊 Real-time download progress
+- 📁 Custom download location
+- ⏹️ Cancel downloads anytime
+- ✕ Cancel URL analysis
+- 🌿 Calm, eye-comfort interface
+- 🔒 Local & private
+- 🛑 Close the server directly from the app
+- 🔊 Subtle click feedback throughout the interface
 
-```powershell
-irm https://raw.githubusercontent.com/YOUR-USERNAME/YOUR-REPOSITORY/main/install.ps1 | iex
-```
+---
 
-The installer is intended to create a **NobiDownloader** folder on the
-Windows Desktop, download the released application package, check the
-required files, and prepare the local launcher.
+## 🚀 Install
 
-> Replace `YOUR-USERNAME/YOUR-REPOSITORY` with the actual GitHub repository
-> before publishing the command.
-
-## Important
-
-NobiDownloader runs locally. **Do not close the terminal window while the
-web app is running** unless the launcher has been designed to run the server
-as a background process.
-
-Only download media that you have permission to download and use. Platform
-terms, copyright, and other applicable laws still apply.
-
-## Project structure
-
-```text
-NobiDownloader/
-├── app/
-│   ├── backend/
-│   └── frontend/
-├── downloads/
-├── Start NobiDownloader.bat
-├── .gitignore
-└── README.md
-```
-
-## Technology
-
-- Python
-- FastAPI/Flask-style local backend as included in this build
-- HTML / CSS / JavaScript
-- yt-dlp
-- FFmpeg
-
-## Status
-
-**V1 Beta — stable baseline**
-
-This release is intended as the V1 baseline. Future UI and feature changes
-should be developed as later versions without unnecessarily changing the
-working V1 download engine.
-
-
-## Release scripts
-
-```text
-scripts/
-├── install.ps1       # Install latest GitHub release to Desktop
-├── update.ps1        # Update an existing Desktop installation
-└── build_release.py  # Build a clean release ZIP + SHA-256
-```
-
-The PowerShell installer is designed for the future short domain command:
+Open **PowerShell** and run:
 
 ```powershell
-irm https://YOUR-DOMAIN/nobi | iex
+irm https://nobidownloader.navajyoti.online | iex
 ```
 
-Before publishing, replace `YOUR-DOMAIN` with your actual domain and verify the
-repository URL inside `scripts/install.ps1`.
+That's it.
 
-## YouTube playlist handling
+The installer sets up NobiDownloader and its required runtime automatically.
 
-NobiDownloader detects YouTube playlist URLs during analysis and shows the number of available videos before download. Playlist downloads are grouped automatically in a folder named after the playlist inside the selected download location (the default is `NobiDownloader\downloads`). Files are numbered by playlist order and include the video title and ID to reduce naming collisions.
+After installation, open the **NobiDownloader** folder on your Desktop and run:
+
+```text
+Start.bat
+```
+
+The web app will open automatically in your browser.
+
+---
+
+## 🎯 How to use
+
+**1. Copy a video or playlist URL**
+
+Paste it into the NobiDownloader dashboard.
+
+**2. Click Analyze**
+
+NobiDownloader prepares the media information.
+
+**3. Choose what you want**
+
+Select:
+
+```text
+Best Available
+360p
+480p
+720p
+1080p
+2K
+4K
+```
+
+or switch to **Audio** for:
+
+```text
+128 kbps
+192 kbps
+256 kbps
+320 kbps
+```
+
+**4. Download**
+
+Choose your save location and start the download.
+
+For playlists, NobiDownloader automatically keeps the videos organized inside a playlist folder.
+
+---
+
+## 🔒 Local & Private
+
+NobiDownloader runs on your own computer.
+
+Your downloaded files stay on your machine, and there is no NobiDownloader cloud service handling your media.
+
+---
+
+## 🌐 Supported Sources
+
+NobiDownloader uses **yt-dlp**, so supported websites depend on the extractors available in the installed yt-dlp version.
+
+Popular sources are available directly from the dashboard.
+
+---
+
+## ⚠️ Responsible Use
+
+Only download content that you have the legal right or permission to download.
+
+Please respect copyright, content licenses, and the terms of the websites you use.
+
+---
+
+## ⭐ Like NobiDownloader?
+
+If you find NobiDownloader useful, please consider giving the project a ⭐ on GitHub.
+
+It really helps the project grow.
+
+<p align="center">
+  <a href="https://github.com/NavajyotiBayan/NobiDownloader">
+    ⭐ Star NobiDownloader
+  </a>
+</p>
+
+---
+
+<p align="center">
+  <strong>NobiDownloader</strong><br>
+  Simple. Private. Yours.
+</p>
