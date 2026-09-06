@@ -90,3 +90,22 @@ NobiDownloader/
 This release is intended as the V1 baseline. Future UI and feature changes
 should be developed as later versions without unnecessarily changing the
 working V1 download engine.
+
+
+## Release scripts
+
+```text
+scripts/
+├── install.ps1       # Install latest GitHub release to Desktop
+├── update.ps1        # Update an existing Desktop installation
+└── build_release.py  # Build a clean release ZIP + SHA-256
+```
+
+The PowerShell installer is designed for the future short domain command:
+
+```powershell
+irm https://YOUR-DOMAIN/nobi | iex
+```
+
+Before publishing, replace `YOUR-DOMAIN` with your actual domain and verify the
+repository URL inside `scripts/install.ps1`.
