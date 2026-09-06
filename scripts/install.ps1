@@ -3,7 +3,14 @@ $ErrorActionPreference = "Stop"
 $Repo = "https://github.com/NavajyotiBayan/NobiDownloader"
 $Desktop = [Environment]::GetFolderPath("Desktop")
 $InstallDir = Join-Path $Desktop "NobiDownloader"
-$release = Invoke-RestMethod -Uri "$Repo/releases/latest" -Headers @{"User-Agent"="NobiDownloader-Installer"}
+$Api = "https://api.github.com/repos/NavajyotiBayan/NobiDownloader/releases/latest"
+
+$release = Invoke-RestMethod `
+    -Uri $Api `
+    -Headers @{
+        "User-Agent" = "NobiDownloader-Installer"
+        "Accept"     = "application/vnd.github+json"
+    }
 $asset = $release.assets | Where-Object {$_.name -match '\.zip$'} | Select-Object -First 1
 if (-not $asset) { throw "No ZIP release asset found." }
 $tmp = Join-Path $env:TEMP "NobiDownloader-latest.zip"
