@@ -1,152 +1,88 @@
 # NobiDownloader
 
-<p align="center">
-  <img src="app/frontend/assets/nobi-brand-lockup.png" width="110" alt="NobiDownloader">
-</p>
+**NobiDownloader** is a free, open-source Windows desktop media downloader powered by **yt-dlp** and **FFmpeg**.
 
-<h2 align="center">Simple. Private. Yours.</h2>
+Paste a video or playlist URL, analyze it, choose what you need, and save the result to the folder you choose.
 
-<p align="center">
-  A calm, local-first media downloader powered by yt-dlp and FFmpeg.
-</p>
+> **Desktop Edition — v2.0.0**
 
-<p align="center">
-  <a href="https://github.com/NavajyotiBayan/NobiDownloader">⭐ Star on GitHub</a>
-  ·
-  <a href="https://github.com/NavajyotiBayan/NobiDownloader/issues">Report an Issue</a>
-</p>
+## Features
 
----
+- Clean Windows desktop application built with Electron
+- Video and audio downloads through yt-dlp
+- FFmpeg-powered media processing
+- Playlist support
+- Custom download location with the native Windows folder picker
+- Right-click paste support
+- Local processing: the download engine runs on your computer
+- No manual Python, FastAPI, or terminal startup for end users
+- Portable build available in every Windows release
 
-## 🌿 NobiDownloader
+## Installation
 
-NobiDownloader makes downloading videos, playlists, and MP3s simple.
+### 1. Direct download — recommended
 
-Everything runs locally on your Windows computer — paste a URL, choose your quality, and download.
+Open the **Releases** page and download:
 
-<p align="center">
-  <img src="docs/screenshots/dashboard.png" width="100%" alt="NobiDownloader Dashboard">
-</p>
+`NobiDownloader-2.0.0-Setup.exe`
 
-### ✨ Features
+Run the installer and follow the Windows installation steps.
 
-- 🎬 Video downloads up to 4K
-- 🎵 MP3 downloads up to 320 kbps
-- 📋 YouTube playlist support
-- 🎚️ Simple quality ladder with smart fallback
-- 📊 Real-time download progress
-- 📁 Custom download location
-- ⏹️ Cancel downloads anytime
-- ✕ Cancel URL analysis
-- 🌿 Calm, eye-comfort interface
-- 🔒 Local & private
-- 🛑 Close the server directly from the app
-- 🔊 Subtle click feedback throughout the interface
+For a portable copy, download:
 
----
+`NobiDownloader-2.0.0-Portable.exe`
 
-## 🚀 Install
+No installation is required for the portable build.
 
-Open **PowerShell** and run:
+### 2. Automatic PowerShell installation
+
+Open PowerShell and run:
 
 ```powershell
-irm https://nobidownloader.navajyoti.online | iex
+irm https://raw.githubusercontent.com/NavajyotiBayan/NobiDownloader/main/scripts/install.ps1 | iex
 ```
 
-That's it.
+The installer script checks the latest GitHub Release, downloads the matching NobiDownloader Setup.exe, and starts the normal Windows installer.
 
-The installer sets up NobiDownloader and its required runtime automatically.
+> Review the script before piping it to `iex` if you prefer to inspect installation scripts first.
 
-After installation, open the **NobiDownloader** folder on your Desktop and run:
+## How it works
 
-```text
-Start.bat
-```
+NobiDownloader is a desktop application. Electron starts the local download engine automatically and shuts it down when the application exits. The application does **not** require the user to manually start a local server.
 
-The web app will open automatically in your browser.
+On first launch, required runtime components are prepared in the user's writable NobiDownloader application-data directory. This avoids requiring write access to `Program Files`.
 
----
+Internet access is required when downloading online media or when the first-run runtime components need to be obtained.
 
-## 🎯 How to use
+## Open-source components and credits
 
-**1. Copy a video or playlist URL**
+NobiDownloader is built on the work of several open-source projects. Please support and respect the licenses of each dependency.
 
-Paste it into the NobiDownloader dashboard.
+- **yt-dlp** — media extraction and downloading. https://github.com/yt-dlp/yt-dlp
+- **FFmpeg** — audio/video processing. https://ffmpeg.org/
+- **Electron** — cross-platform desktop application runtime. https://github.com/electron/electron
+- **electron-builder** — application packaging and Windows installers. https://github.com/electron-userland/electron-builder
+- **FastAPI** — Python web/API framework used by the local download engine. https://github.com/fastapi/fastapi
+- **Uvicorn** — ASGI server used to run the FastAPI application. https://github.com/encode/uvicorn
+- **Pydantic** — data validation used by the backend. https://github.com/pydantic/pydantic
+- **Python** — runtime for the backend and supporting tools. https://www.python.org/
 
-**2. Click Analyze**
+See `THIRD-PARTY-NOTICES.md` for additional licensing and attribution information.
 
-NobiDownloader prepares the media information.
+## License
 
-**3. Choose what you want**
+NobiDownloader source code is released under the license included in `LICENSE`.
 
-Select:
+Third-party components remain under their respective licenses.
 
-```text
-Best Available
-360p
-480p
-720p
-1080p
-2K
-4K
-```
+## Disclaimer
 
-or switch to **Audio** for:
+NobiDownloader is a technical download utility. Users are responsible for complying with the terms of service, copyright rules, and applicable laws for the websites and content they access.
 
-```text
-128 kbps
-192 kbps
-256 kbps
-320 kbps
-```
+## Contributing
 
-**4. Download**
-
-Choose your save location and start the download.
-
-For playlists, NobiDownloader automatically keeps the videos organized inside a playlist folder.
+Bug reports, improvements, documentation updates, and pull requests are welcome. Please use the GitHub issue tracker for reproducible problems and feature discussions.
 
 ---
 
-## 🔒 Local & Private
-
-NobiDownloader runs on your own computer.
-
-Your downloaded files stay on your machine, and there is no NobiDownloader cloud service handling your media.
-
----
-
-## 🌐 Supported Sources
-
-NobiDownloader uses **yt-dlp**, so supported websites depend on the extractors available in the installed yt-dlp version.
-
-Popular sources are available directly from the dashboard.
-
----
-
-## ⚠️ Responsible Use
-
-Only download content that you have the legal right or permission to download.
-
-Please respect copyright, content licenses, and the terms of the websites you use.
-
----
-
-## ⭐ Like NobiDownloader?
-
-If you find NobiDownloader useful, please consider giving the project a ⭐ on GitHub.
-
-It really helps the project grow.
-
-<p align="center">
-  <a href="https://github.com/NavajyotiBayan/NobiDownloader">
-    ⭐ Star NobiDownloader
-  </a>
-</p>
-
----
-
-<p align="center">
-  <strong>NobiDownloader</strong><br>
-  Simple. Private. Yours.
-</p>
+**NobiDownloader — Download Media Your Way.**

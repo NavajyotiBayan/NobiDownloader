@@ -1,0 +1,43 @@
+name: Build Windows Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --ignore-scripts
+
+      - name: Build Windows packages
+        run: npx electron-builder --win nsis portable --publish never
+
+      - name: Generate SHA256
+        shell: powershell
+        run: |
+          Get-ChildItem release\*.exe | Get-FileHash -Algorithm SHA256 | Format-Table -AutoSize
+          Get-ChildItem release\*.exe | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($_.Name)" | Out-File release\SHA256SUMS.txt -Encoding ascii -Append
+          }
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: NobiDownloader-Windows
+          path: |
+            release/*.exe
+            release/SHA256SUMS.txt

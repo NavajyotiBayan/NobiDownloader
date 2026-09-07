@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#eef4ed">
-<title>NobiDownloader — V1.1 Prototype</title>
+<title>NobiDownloader — Desktop</title>
 <link rel="icon" type="image/png" href="/static/assets/nobi-logo.png">
-<link rel="stylesheet" href="/static/style.css?v=v11-logo1">
+<link rel="stylesheet" href="/static/style.css?v=v16-github-corner">
 </head>
 <body class="theme-forest">
 <div class="shell">
@@ -30,7 +30,7 @@
       <div class="tree tree-a"></div><div class="tree tree-b"></div>
       <p>Good Content<br><em>Goes Further</em></p>
     </div>
-    <div class="sidebar-foot"><span>V1.1 Prototype</span><span>Made for calmer sessions ♡</span></div>
+    <div class="sidebar-foot"><span>Desktop Edition</span><span>Made for calmer sessions ♡</span></div>
   </aside>
 
   <main class="content">
@@ -39,24 +39,15 @@
       <div class="topline">Simple <i>•</i> Fast <i>•</i> Private <i>•</i> Yours</div>
       <div class="top-actions">
         <button class="icon-btn" id="themeButton" title="Theme">☼</button>
-        <a class="icon-btn github" href="https://github.com/NavajyotiBayan/NobiDownloader" target="_blank" rel="noopener" title="GitHub">◖</a>
+        <a class="github-star-top" href="https://github.com/NavajyotiBayan/NobiDownloader" target="_blank" rel="noopener" title="Love this? Star NobiDownloader on GitHub" aria-label="Love this? Star NobiDownloader on GitHub">
+          <span class="github-star-top-icon" aria-hidden="true">★</span>
+          <span class="github-star-top-copy"><b>Love this?</b><small>Star on GitHub</small></span>
+        </a>
       </div>
     </header>
 
-    <section class="view active" id="view-home">
-      <section class="dashboard-strip" aria-label="NobiDownloader status and support">
-        <div class="dashboard-card server-dashboard-card">
-          <div class="dashboard-card-icon server-live-icon">●</div>
-          <div class="dashboard-card-copy"><span class="eyebrow">LOCAL SERVER</span><b>Server Online</b><small>NobiDownloader is running safely on this computer.</small></div>
-          <button id="dashboardStopServer" class="danger-outline" type="button">Close Server</button>
-        </div>
-        <a class="dashboard-card star-dashboard-card" href="https://github.com/NavajyotiBayan/NobiDownloader" target="_blank" rel="noopener" aria-label="Star NobiDownloader on GitHub">
-          <div class="dashboard-card-icon star-icon">★</div>
-          <div class="dashboard-card-copy"><span class="eyebrow">SUPPORT NOBI</span><b>If you like the tool, please star it</b><small>A GitHub star helps the project grow. Thank you! ♡</small></div>
-          <span class="dashboard-arrow">↗</span>
-        </a>
-      </section>
 
+    <section class="view active" id="view-home">
       <div class="welcome">
         <div>
           <span class="eyebrow">WELCOME TO NOBIDOWNLOADER</span>
@@ -118,9 +109,12 @@
 
         <div class="destination">
           <div class="dest-icon">⌂</div>
-          <div class="dest-copy"><span>DOWNLOAD LOCATION</span><b id="savePathLabel">NobiDownloader\downloads</b><small id="pathStatus">Default download folder</small></div>
-          <input id="savePath" type="text" aria-label="Download folder path" placeholder="Default: NobiDownloader\downloads">
-          <button id="chooseFolder" class="outline">Change</button>
+          <div class="dest-copy">
+            <span>DOWNLOAD LOCATION</span>
+            <input id="savePath" type="text" aria-label="Download folder path" placeholder="Default: NobiDownloader\downloads" autocomplete="off" spellcheck="false">
+            <small id="pathStatus">Default download folder</small>
+          </div>
+          <button id="chooseFolder" type="button" class="outline">Browse</button>
         </div>
         <div id="playlistHint" class="info-note hidden">ⓘ A folder named after the playlist will be created automatically inside your selected download location.</div>
 
@@ -138,7 +132,7 @@
           <span class="mini-icon">◌</span><div><b>Runs locally</b><small>yt-dlp + FFmpeg do the work on your machine.</small></div>
         </div>
         <div class="mini-card"><span class="mini-icon">⌁</span><div><b>Easy on the eyes</b><small>Soft surfaces, gentle contrast and spacious controls.</small></div></div>
-        <a class="mini-card github-love" href="https://github.com/NavajyotiBayan/NobiDownloader" target="_blank" rel="noopener"><span class="mini-icon">★</span><div><b>Like NobiDownloader?</b><small>Please star the project on GitHub — it really helps.</small></div><span class="github-arrow">↗</span></a>
+
       </section>
     </section>
 
@@ -157,13 +151,11 @@
       <div class="page-heading"><span class="eyebrow">PREFERENCES</span><h1>Settings</h1><p>Keep the experience comfortable for longer download sessions.</p></div>
       <div class="settings-grid">
         <article class="settings-card"><div><b>Eye-comfort theme</b><span>Choose a soft palette. Your choice is saved locally.</span></div><div class="theme-swatches" id="themeSwatches"></div></article>
-        <article class="settings-card server-card"><div><b>Local server</b><span>NobiDownloader runs at <code>127.0.0.1:8765</code>. You can safely stop the server when you are finished.</span></div><div class="server-actions"><span id="serverStatus" class="status-chip">● Running</span><button id="stopServer" class="danger-outline" type="button">Stop Server</button></div></article>
         <article class="settings-card"><div><b>Privacy</b><span>Downloads and downloaded files stay on this computer.</span></div><span class="status-chip">✓ Local only</span></article>
       </div>
     </section>
 
-    <div class="terminal-note"><span>●</span><div><b>NobiDownloader is running locally</b><small>Keep the terminal window open while using the web app. Closing the terminal stops the local server.</small></div></div>
-    <footer><b>▶ NobiDownloader</b><span>Good Content Goes Further</span><span>Built with yt-dlp + FFmpeg</span><span>V1.1 Prototype</span><a href="https://github.com/NavajyotiBayan/NobiDownloader" target="_blank" rel="noopener">★ Star on GitHub</a></footer>
+    <footer><b>▶ NobiDownloader</b><span>Good Content Goes Further</span><span>Built with yt-dlp + FFmpeg</span><span>Desktop Edition</span></footer>
   </main>
 </div>
 
@@ -203,6 +195,6 @@
     <div id="completeActions" class="modal-actions hidden"><button id="openComplete" class="primary">⌂ Open Download Folder</button><button id="closeComplete" class="outline">Done</button></div>
   </div>
 </div>
-<script src="/static/app.js?v=v11-logo1"></script>
+<script src="/static/app.js?v=v16-github-corner"></script>
 </body>
 </html>

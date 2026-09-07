@@ -19,16 +19,18 @@ from pydantic import BaseModel
 ROOT = Path(__file__).resolve().parents[2]
 APP = ROOT / "app"
 FRONTEND = APP / "frontend"
-DEFAULT_DOWNLOADS = ROOT / "downloads"
-TOOLS = ROOT / "tools"
+DATA_ROOT = Path(os.environ.get("NOBI_DATA_ROOT", str(ROOT))).expanduser().resolve()
+DEFAULT_DOWNLOADS = DATA_ROOT / "downloads"
+TOOLS = DATA_ROOT / "tools"
 YTDLP = TOOLS / "yt-dlp.exe"
 FFMPEG = TOOLS / "ffmpeg" / "bin" / "ffmpeg.exe"
 DEFAULT_DOWNLOADS.mkdir(exist_ok=True)
 
-app = FastAPI(title="NobiDownloader", version="1.1.0-prototype")
+app = FastAPI(title="NobiDownloader", version="2.0.0")
 app.mount("/static", StaticFiles(directory=FRONTEND), name="static")
 jobs = {}
 UVICORN_SERVER = None
+PORT = int(os.environ.get("NOBI_PORT", "8765"))
 
 
 @app.get("/")
@@ -82,7 +84,11 @@ def run_ytdlp(args, allow_playlist=False):
     if not allow_playlist:
         cmd.append("--no-playlist")
     cmd += ["--no-warnings", "--ffmpeg-location", str(FFMPEG)] + args
-    return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    except FileNotFoundError as exc:
+        missing = YTDLP if not YTDLP.exists() else FFMPEG
+        raise RuntimeError(f"Required downloader tool is missing: {missing}") from exc
 
 
 def clean_windows_path(raw: str) -> str:
@@ -153,7 +159,10 @@ async def analyze(req: AnalyzeRequest):
     else:
         args += ["--no-playlist"]
 
-    result = run_ytdlp(args + [url], allow_playlist=looks_like_playlist)
+    try:
+        result = run_ytdlp(args + [url], allow_playlist=looks_like_playlist)
+    except RuntimeError as exc:
+        raise HTTPException(500, str(exc))
     if result.returncode != 0:
         detail = (result.stderr or result.stdout or "Could not analyze this URL.").strip().splitlines()[-1]
         raise HTTPException(400, detail[:500])
@@ -442,6 +451,79 @@ async def shutdown_server():
     return {"ok": True, "stopped_jobs": len(active)}
 
 
+@app.post("/api/select-folder")
+def select_folder():
+    """Open the modern Windows Explorer-style common dialog and select a folder."""
+    if os.name != "nt":
+        raise HTTPException(501, "Windows folder picker is available only on Windows.")
+
+    default_path = str(DEFAULT_DOWNLOADS.resolve())
+    # OpenFileDialog uses the normal Windows Explorer-style common dialog.
+    # A placeholder filename lets the user navigate normally and choose the
+    # current folder with the Open button.
+    script = r"""
+$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Windows.Forms
+
+$dialog = New-Object System.Windows.Forms.OpenFileDialog
+$dialog.Title = 'Choose NobiDownloader download folder'
+$dialog.InitialDirectory = [Environment]::GetEnvironmentVariable('NOBI_DEFAULT_FOLDER')
+$dialog.CheckFileExists = $false
+$dialog.CheckPathExists = $true
+$dialog.ValidateNames = $false
+$dialog.Multiselect = $false
+$dialog.RestoreDirectory = $false
+$dialog.AddExtension = $false
+$dialog.DefaultExt = ''
+$dialog.FileName = 'Select this folder'
+$dialog.Filter = 'Folders|*.'
+
+$result = $dialog.ShowDialog()
+if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+    $selected = $dialog.FileName
+    if ($selected.EndsWith('Select this folder', [System.StringComparison]::OrdinalIgnoreCase)) {
+        $selected = $selected.Substring(0, $selected.Length - 'Select this folder'.Length).TrimEnd('\')
+    }
+    if ($selected) {
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::Write($selected)
+    }
+}
+"""
+
+    try:
+        env = os.environ.copy()
+        env["NOBI_DEFAULT_FOLDER"] = default_path
+        result = subprocess.run(
+            ["powershell.exe", "-NoProfile", "-STA", "-Command", script],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            env=env,
+            timeout=300,
+        )
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or "Windows folder picker failed.").strip()
+            raise RuntimeError(detail)
+
+        path = (result.stdout or "").strip()
+        if not path:
+            return {"canceled": True, "path": ""}
+
+        chosen = Path(clean_windows_path(path)).resolve()
+        chosen.mkdir(parents=True, exist_ok=True)
+        if not chosen.is_dir():
+            raise RuntimeError("The selected location is not a folder.")
+        return {"canceled": False, "path": str(chosen)}
+    except subprocess.TimeoutExpired:
+        raise HTTPException(408, "Folder picker timed out. Please try again.")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(500, f"Could not open the Windows folder picker: {exc}")
+
+
 @app.post("/api/open-folder")
 def open_folder(req: FolderRequest):
     """Open a real Windows Explorer window for a file or folder."""
@@ -479,14 +561,15 @@ if __name__ == "__main__":
     # the server lifetime. Closing the launcher therefore closes the server.
     def _open_browser():
         try:
-            webbrowser.open("http://127.0.0.1:8765/")
+            webbrowser.open(f"http://127.0.0.1:{PORT}/")
         except Exception:
             pass
 
-    threading.Timer(1.0, _open_browser).start()
+    if os.environ.get("NOBI_ELECTRON") != "1":
+        threading.Timer(1.0, _open_browser).start()
 
     import uvicorn
-    log_path = ROOT / "logs" / "server.log"
+    log_path = DATA_ROOT / "logs" / "server.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
         level=logging.INFO,
@@ -501,7 +584,7 @@ if __name__ == "__main__":
     config = uvicorn.Config(
         app,
         host="127.0.0.1",
-        port=8765,
+        port=PORT,
         log_level="info",
         log_config=None,
     )

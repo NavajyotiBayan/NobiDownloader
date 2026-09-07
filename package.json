@@ -1,0 +1,62 @@
+{
+  "name": "nobidownloader",
+  "productName": "NobiDownloader",
+  "version": "2.0.0",
+  "description": "NobiDownloader desktop downloader",
+  "main": "electron/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis portable",
+    "build:win": "electron-builder --win nsis portable"
+  },
+  "devDependencies": {
+    "electron": "37.10.3",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.nobi.downloader",
+    "productName": "NobiDownloader",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "app/**/*",
+      "electron/**/*",
+      "scripts/bootstrap_python.bat",
+      "scripts/bootstrap_ffmpeg.bat",
+      "package.json",
+      "LICENSE"
+    ],
+    "asar": false,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "NobiDownloader-${version}-Setup.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "NobiDownloader"
+    },
+    "portable": {
+      "artifactName": "NobiDownloader-${version}-Portable.exe"
+    },
+    "icon": "build/icons/nobi.ico"
+  },
+  "author": "Navajyoti Bayan"
+}

@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s);
-let current=null,selectedQuality='best',selectedKind='video',selectedFolder='';
+let current=null,selectedQuality='best',selectedKind='video',selectedFolder=localStorage.getItem('nobi-download-folder')||'';
 let analysisController=null,downloadWatchTimer=null,activeJobId=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const THEMES={forest:['#668f72','#88a994'],midnight:['#79c59a','#9ab7a4'],slate:['#6b8797','#9baab3'],lavender:['#81729b','#a995bd'],warm:['#8a8f70','#b1a987']};
@@ -25,9 +25,43 @@ document.querySelectorAll('.source-chip').forEach(b=>b.onclick=()=>{
   if(b.dataset.armed==='1'){window.open(home,'_blank','noopener');b.dataset.armed='0'}else{b.dataset.armed='1';setTimeout(()=>b.dataset.armed='0',2200)}
 });
 
-async function chooseFolder(){try{const r=await fetch('/api/select-folder',{method:'POST'}),d=await r.json();if(!r.ok)throw Error(d.detail||'Folder picker failed.');if(d.path){selectedFolder=d.path;updateFolder(d.path);msg('Download folder selected.');clickSound('success')}}catch(e){msg(e.message||'Folder picker could not be opened.',true);clickSound('error')}}
-function updateFolder(path){$('#savePathLabel').textContent=path||'NobiDownloader\\downloads';$('#pathStatus').textContent=path?'Custom folder':'Default download folder';$('#modalPath').textContent=path||'NobiDownloader\\downloads';}
-$('#chooseFolder').onclick=chooseFolder;$('#savePath').onchange=()=>{selectedFolder=$('#savePath').value.trim();updateFolder(selectedFolder)};
+async function chooseFolder(){
+  try{
+    msg('Opening Windows folder picker…');
+    const response=await fetch('/api/select-folder',{method:'POST',cache:'no-store'});
+    let d=null;
+    try{d=await response.json()}catch(_){}
+    if(!response.ok){
+      throw Error(d?.detail||d?.error||`Folder picker failed (${response.status}).`);
+    }
+    if(d?.canceled)return;
+    if(d?.error)throw Error(d.error);
+    if(!d?.path)throw Error('No folder was selected.');
+    selectedFolder=d.path;
+    localStorage.setItem('nobi-download-folder',selectedFolder);
+    $('#savePath').value=selectedFolder;
+    updateFolder(selectedFolder);
+    msg('Download folder selected.');
+    clickSound('success');
+  }catch(e){
+    console.error('Folder picker error:',e);
+    msg(e.message||'Windows folder picker could not be opened.',true);
+    clickSound('error');
+  }
+}
+function updateFolder(path){
+  const value=(path||'').trim();
+  $('#savePath').value=value;
+  $('#pathStatus').textContent=value?'Custom folder':'Default download folder';
+  $('#modalPath').textContent=value||'NobiDownloader\\downloads';
+}
+$('#chooseFolder').type='button';
+$('#chooseFolder').onclick=(e)=>{e.preventDefault();e.stopPropagation();chooseFolder();};
+$('#savePath').value=selectedFolder;
+updateFolder(selectedFolder);
+$('#savePath').addEventListener('input',()=>{selectedFolder=$('#savePath').value.trim();if(selectedFolder)localStorage.setItem('nobi-download-folder',selectedFolder);else localStorage.removeItem('nobi-download-folder');updateFolder(selectedFolder)});
+$('#savePath').addEventListener('change',()=>{selectedFolder=$('#savePath').value.trim();if(selectedFolder)localStorage.setItem('nobi-download-folder',selectedFolder);else localStorage.removeItem('nobi-download-folder');updateFolder(selectedFolder)});
+
 const VIDEO_PRESETS=[['best','Best Available','Highest available'],['360p','360p','SD'],['480p','480p','SD'],['720p','720p','HD'],['1080p','1080p','FHD'],['2k','2K','1440p'],['4k','4K','2160p']];
 const AUDIO_PRESETS=[['128','128 kbps','MP3'],['192','192 kbps','MP3'],['256','256 kbps','MP3'],['320','320 kbps','MP3']];
 function sourceLimits(){
@@ -132,27 +166,6 @@ async function loadDownloads(){try{const items=await(await fetch('/api/downloads
 function loadPlaylists(){loadDownloads().then(()=>{fetch('/api/downloads').then(r=>r.json()).then(items=>{const groups={};items.filter(x=>x.folder).forEach(x=>(groups[x.folder] ||= []).push(x));const names=Object.keys(groups);$('#playlistsList').innerHTML=names.length?names.map(n=>`<article class="playlist-card"><h3>☷ ${esc(n)}</h3><p>${groups[n].length} downloaded ${groups[n].length===1?'file':'files'} in this playlist folder.</p><button class="outline" data-folder="${esc(groups[n][0].path)}">Open folder →</button></article>`).join(''):'<div class="empty-state"><strong>No playlist downloads yet</strong><span>Analyze a YouTube playlist from Home to get started.</span></div>';$('#playlistsList').querySelectorAll('[data-folder]').forEach(b=>b.onclick=()=>openFolder(b.dataset.folder))}).catch(()=>{})})}
 async function openFolder(path=''){try{const r=await fetch('/api/open-folder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:path||selectedFolder||''})});const d=await r.json();if(!r.ok)throw Error(d.detail||'Could not open the folder.');clickSound('success')}catch(e){msg(e.message,true);clickSound('error')}}
 $('#refreshDownloads').onclick=loadDownloads;$('#openFolder').onclick=()=>openFolder();
-$('#stopServer').onclick=stopServer;
-$('#dashboardStopServer').onclick=stopServer;
-async function stopServer(){
-  if(!confirm('Stop NobiDownloader?\n\nThis will close the local server and stop any active downloads.')) return;
-  const b=$('#stopServer'),db=$('#dashboardStopServer'),st=$('#serverStatus');
-  if(b)b.disabled=true; if(db)db.disabled=true;
-  if(st){st.textContent='● Stopping…';st.classList.add('stopping')}
-  try{
-    const r=await fetch('/api/shutdown',{method:'POST',headers:{'Content-Type':'application/json'}});
-    const d=await r.json().catch(()=>({}));
-    if(!r.ok)throw Error(d.detail||'Could not stop the server.');
-    if(st)st.textContent='● Server stopping'; if(db)db.textContent='Closing…';
-    msg('NobiDownloader is shutting down. You can close this browser tab.');
-    clickSound('success');
-  }catch(e){
-    if(b)b.disabled=false; if(db)db.disabled=false; if(db)db.textContent='Close Server';
-    if(st){st.textContent='● Running';st.classList.remove('stopping')}
-    msg(e.message||'Could not stop the server.',true);
-    clickSound('error');
-  }
-}
 
 initTheme();
 loadDownloads();

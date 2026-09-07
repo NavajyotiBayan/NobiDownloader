@@ -3,9 +3,11 @@ setlocal EnableExtensions
 cd /d "%~dp0.."
 
 set "ROOT=%~dp0.."
-set "TOOLS=%ROOT%\tools"
-set "ZIP=%TOOLS%\ffmpeg.zip"
-set "TMP=%TOOLS%\ffmpeg_extract"
+if "%NOBI_DATA_ROOT%"=="" set "NOBI_DATA_ROOT=%ROOT%"
+set "DATA_ROOT=%NOBI_DATA_ROOT%"
+set "TOOLS=%DATA_ROOT%\tools"
+set "ZIP=%DATA_ROOT%\tools\ffmpeg.zip"
+set "TMP=%DATA_ROOT%\tools\ffmpeg_extract"
 
 if exist "%TOOLS%\ffmpeg\bin\ffmpeg.exe" exit /b 0
 

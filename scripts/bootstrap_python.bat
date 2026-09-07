@@ -3,9 +3,14 @@ setlocal EnableExtensions
 cd /d "%~dp0.."
 
 set "ROOT=%~dp0.."
-set "PYDIR=%ROOT%\runtime\python"
-set "ZIP=%ROOT%\runtime\python-embed.zip"
-set "GETPIP=%ROOT%\runtime\get-pip.py"
+if "%NOBI_DATA_ROOT%"=="" set "NOBI_DATA_ROOT=%ROOT%"
+set "DATA_ROOT=%NOBI_DATA_ROOT%"
+set "PYDIR=%DATA_ROOT%\runtime\python"
+set "ZIP=%DATA_ROOT%\runtime\python-embed.zip"
+set "GETPIP=%DATA_ROOT%\runtime\get-pip.py"
+
+rem Ensure the parent runtime directory exists before downloading files into it.
+if not exist "%DATA_ROOT%\runtime" mkdir "%DATA_ROOT%\runtime"
 
 if exist "%PYDIR%\python.exe" exit /b 0
 
