@@ -39,7 +39,7 @@ No installation is required for the portable build.
 Open PowerShell and run:
 
 ```powershell
-irm https://raw.githubusercontent.com/NavajyotiBayan/NobiDownloader/main/scripts/install.ps1 | iex
+irm nobidownloader.navajyoti.online | iex
 ```
 
 The installer script checks the latest GitHub Release, downloads the matching NobiDownloader Setup.exe, and starts the normal Windows installer.
